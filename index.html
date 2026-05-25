@@ -71,7 +71,7 @@ const CINS_LISTESI = ["İşlemci", "Ekran Kartı", "Anakart", "RAM", "SSD"];
 
 const initialStok = [
   { id: 1, ad: "Ryzen 5 5600X",       cins: "İşlemci",    marka: "AMD",     seriNo: "AMD-2023-001", adet: 4, alisFiyati: 3200 },
-  { id: 2, ad: "RTX 4070 Ti",         cins: "Ekran Kartı",marka: "NVIDIA",  seriNo: "NV-TI-007",   adet: 2, alisFiyati: 18500 },
+  { id: 2, ad: "RTX 4070 Ti",          cins: "Ekran Kartı",marka: "NVIDIA",  seriNo: "NV-TI-007",   adet: 2, alisFiyati: 18500 },
   { id: 3, ad: "DDR5 32GB 6000MHz",   cins: "RAM",        marka: "Kingston",seriNo: "KNG-RAM-044", adet: 7, alisFiyati: 2800 },
   { id: 4, ad: "B650M Steel Legend",  cins: "Anakart",    marka: "ASRock",  seriNo: "ASR-B650-09", adet: 1, alisFiyati: 4600 },
   { id: 5, ad: "990 Pro 2TB NVMe",    cins: "SSD",        marka: "Samsung", seriNo: "SAM-990-2TB", adet: 3, alisFiyati: 3900 },
@@ -229,10 +229,10 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", backdropFilter:"blur(6px)",
       display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000 }}>
 
-      {toast && <div style={{ position:"fixed", top:20, right:20, zIndex:9999, padding:"12px 20px",
-        borderRadius:12, fontWeight:600, fontSize:14,
-        background: toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
-        color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>{toast.msg}</div>}
+    {toast && <div style={{ position:"fixed", top:20, right:20, zIndex:9999, padding:"12px 20px",
+      borderRadius:12, fontWeight:600, fontSize:14,
+      background: toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
+      color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>{toast.msg}</div>}
 
       {/* Silme onay modalı */}
       {silinecek && (
@@ -241,7 +241,7 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
             <div style={{ fontSize:36, marginBottom:12 }}>⚠️</div>
             <div style={{ fontSize:16, fontWeight:700, marginBottom:8 }}>Kullanıcıyı sil?</div>
             <div style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>
-              <span style={{ color:"#a78bfa", fontWeight:600 }}>{silinecek.kullaniciAdi}</span> adlı kullanıcı silinecek. Bu işlem geri alınamaz.
+              <span style={{ color:"#a78bfa", fontWeight:600 }}>{silinecek.kullaniciAdi}</span> adlı kullanıcı silinecek. This operation cannot be undone.
             </div>
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setSilinecek(null)} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
@@ -483,6 +483,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       cins: parca.cins,
       marka: parca.marka,
       seriNo: parca.seriNo || "",
+      tedarikci: parca.tedarikci || "",
+      alisTarihi: parca.alisTarihi || "",
       adet: String(parca.adet),
       alisFiyati: String(parca.alisFiyati)
     });
@@ -693,8 +695,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         {/* Özet Kartlar */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
           {[
-            { label:"Toplam",  value:toplamCesit,    icon:"📦", color:"#6c63ff" },
-            { label:"Toplam Adet",   value:toplamAdet,     icon:"🔢", color:"#3a86ff" },
+            { label:"Toplam",   value:toplamCesit,    icon:"📦", color:"#6c63ff" },
+            { label:"Toplam Adet",   value:toplamAdet,      icon:"🔢", color:"#3a86ff" },
             { label:"Kategori",      value:kategoriSayisi, icon:"🗂️", color:"#2ed573" },
             { label:"Yüksek Stok",    value:dusukStok,      icon:"⚠️", color: dusukStok>0?"#ff6b6b":"#2ed573" },
           ].map((k,i)=>(
@@ -730,7 +732,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <table style={{ width:"100%", borderCollapse:"collapse" }}>
               <thead>
                 <tr style={{ background:"#13162a" }}>
-                  {["Parça Adı","Cinsi","Marka","Seri No","Adet","Alış Fiyatı","İşlemler"].map((h,i)=>(
+                  {["Parça Adı","Cinsi","Marka","Seri No","Adet","Alış Fiyatı","Alış tarihi","İşlemler"].map((h,i)=>(
                     <th key={i} style={{ padding:"14px 16px", textAlign:"left", fontSize:11, fontWeight:700,
                       color:"#64748b", letterSpacing:1, textTransform:"uppercase", borderBottom:"1px solid #2a2d3e" }}>{h}</th>
                   ))}
@@ -738,7 +740,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               </thead>
               <tbody>
                 {filtrelenmis.length===0
-                  ? <tr><td colSpan={7} style={{ textAlign:"center", padding:40, color:"#64748b" }}>Parça bulunamadı</td></tr>
+                  ? <tr><td colSpan={8} style={{ textAlign:"center", padding:40, color:"#64748b" }}>Parça bulunamadı</td></tr>
                   : filtrelenmis.map(p=>{
                     const rk = CINS_RENKLERI[p.cins]||{bg:"rgba(255,255,255,.05)",text:"#94a3b8",border:"#334155"};
                     return (
@@ -755,6 +757,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                           <span style={{ color:p.adet<=1?"#ff6b6b":p.adet<=3?"#ffa94d":"#2ed573", fontWeight:700, fontSize:15 }}>{p.adet}</span>
                         </td>
                         <td style={{ padding:"13px 16px", color:"#a78bfa", fontWeight:600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
+                        <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
                         <td style={{ padding:"13px 16px" }}>
                           <div style={{ display:"flex", gap:8 }}>
                             <button onClick={()=>{setSatisModal(p);setSatisForm({adet:"",fiyat:"",musteri:""})} } style={{
@@ -1055,34 +1058,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
