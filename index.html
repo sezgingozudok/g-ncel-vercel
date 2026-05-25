@@ -11,7 +11,6 @@
     html, body, #root { margin: 0; min-height: 100%; } 
     body { background: #0f1117; }
 
-    /* ─── MOBİL UYUMLULUK (RESPONSIVE) CSS EKLEMELERİ ─── */
     .header-container {
       background: linear-gradient(135deg,#1a1d2e,#16192a); 
       border-bottom: 1px solid #2a2d3e;
@@ -30,7 +29,7 @@
     }
     .ozet-grid {
       display: grid; 
-      grid-template-columns: repeat(4, 1fr); 
+      grid-template-columns: repeat(3, 1fr); /* 4'ten 3'e düşürüldü */
       gap: 16px; 
       margin-bottom: 24px;
     }
@@ -38,27 +37,27 @@
       background: #1a1d2e; 
       border: 1px solid #2a2d3e; 
       border-radius: 16px; 
-      overflow-x: auto; /* Mobilde tablonun ekranı yırtmasını önler, kaydırılabilir yapar */
+      overflow-x: auto;
     }
     .modal-box {
       background: #1a1d2e; 
       border-radius: 20px; 
       padding: 28px; 
       width: 460px; 
-      max-width: 92%; /* Mobilde ekran kenarlarına yapışmasını engeller */
+      max-width: 92%; 
       border: 1px solid #2a2d3e; 
       box-shadow: 0 20px 60px rgba(0,0,0,.6);
     }
 
     @media (max-width: 1024px) {
       .ozet-grid {
-        grid-template-columns: repeat(2, 1fr); /* Tablet ve büyük telefonlarda kartları 2'li yapar */
+        grid-template-columns: repeat(2, 1fr); 
       }
     }
     @media (max-width: 768px) {
       .header-container {
         padding: 16px;
-        flex-direction: column; /* Mobilde logoyu ve butonları alt alta dengeler */
+        flex-direction: column; 
         align-items: flex-start;
       }
       .header-actions {
@@ -66,7 +65,7 @@
         justify-content: flex-start;
       }
       .ozet-grid {
-        grid-template-columns: 1fr; /* Küçük telefonlarda kartları tekli alt alta dizer */
+        grid-template-columns: 1fr; 
       }
     }
   </style>
@@ -76,9 +75,6 @@
   <script type="text/babel">
 const { useEffect, useState } = React;
 
-// ╔══════════════════════════════════════════════════════════╗
-// ║  BAŞLANGIÇ KULLANICISI — Yönetici silinemeyen ana admin ║
-// ╚══════════════════════════════════════════════════════════╝
 const SUPER_ADMIN = { kullaniciAdi: "Yusuf", sifre: "12345", yetki: "Yönetici" };
 const SUPABASE_URL = "https://mdhtzirpkjejlrbwwwkw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cELISZREV0oXwwFZOtcyxg_m094EZW1";
@@ -112,7 +108,8 @@ const fromProduct = (p) => ({
   cins: p.type,
   marka: p.brand,
   seriNo: p.serial_no || "",
-  adet: Number(p.quantity) !== undefined && !Number.isNaN(Number(p.quantity)) ? Number(p.quantity) : (Number(p.quantity) || 0),
+  aciklama: p.description || "", // Ek açıklama alanı map edildi
+  adet: 1, // Arka planda kod yapısının bozulmaması için sabit 1 bırakıldı
   alisFiyati: Number(p.purchase_price) || 0,
   tedarikci: p.supplier || "",
   alisTarihi: p.purchase_date || ""
@@ -123,7 +120,8 @@ const toProduct = (p) => ({
   type: p.cins,
   brand: p.marka,
   serial_no: p.seriNo || null,
-  quantity: Number(p.adet) || 0,
+  description: p.aciklama || null, // Ek açıklama alanı veritabanına aktarılıyor
+  quantity: 1, 
   purchase_price: Number(p.alisFiyati) || 0,
   supplier: p.tedarikci || null,
   purchase_date: p.alisTarihi || null
@@ -136,7 +134,7 @@ const fromSale = (s) => ({
   cins:s.type,
   marka:s.brand,
   seriNo:s.serial_no || "",
-  adet:Number(s.quantity)||0,
+  adet:Number(s.quantity)||1,
   fiyat:Number(s.sale_price)||0,
   alisFiyati:Number(s.purchase_price)||0,
   musteri:s.customer,
@@ -154,11 +152,8 @@ const CINS_RENKLERI = {
 const CINS_LISTESI = ["İşlemci", "Ekran Kartı", "Anakart", "RAM", "SSD"];
 
 const initialStok = [
-  { id: 1, ad: "Ryzen 5 5600X",       cins: "İşlemci",    marka: "AMD",     seriNo: "AMD-2023-001", adet: 4, alisFiyati: 3200 },
-  { id: 2, ad: "RTX 4070 Ti",          cins: "Ekran Kartı",marka: "NVIDIA",  seriNo: "NV-TI-007",   adet: 2, alisFiyati: 18500 },
-  { id: 3, ad: "DDR5 32GB 6000MHz",   cins: "RAM",        marka: "Kingston",seriNo: "KNG-RAM-044", adet: 7, alisFiyati: 2800 },
-  { id: 4, ad: "B650M Steel Legend",  cins: "Anakart",    marka: "ASRock",  seriNo: "ASR-B650-09", adet: 1, alisFiyati: 4600 },
-  { id: 5, ad: "990 Pro 2TB NVMe",    cins: "SSD",        marka: "Samsung", seriNo: "SAM-990-2TB", adet: 3, alisFiyati: 3900 },
+  { id: 1, ad: "Ryzen 5 5600X",       cins: "İşlemci",    marka: "AMD",     seriNo: "AMD-2023-001", tedarikci: "Sinerji Bilgisayar", alisFiyati: 3200 },
+  { id: 2, ad: "RTX 4070 Ti",          cins: "Ekran Kartı",marka: "NVIDIA",  seriNo: "NV-TI-007",   tedarikci: "İtopya", alisFiyati: 18500 },
 ];
 
 const inp = (extra = {}) => ({
@@ -167,9 +162,6 @@ const inp = (extra = {}) => ({
   fontFamily: "'Outfit', sans-serif", outline: "none", boxSizing: "border-box", ...extra
 });
 
-// ════════════════════════════════════════════════════════════
-//  LOGIN EKRANI
-// ════════════════════════════════════════════════════════════
 function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
   const [kAdi, setKAdi]           = useState("");
   const [sifre, setSifre]         = useState("");
@@ -248,9 +240,6 @@ function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
   );
 }
 
-// ════════════════════════════════════════════════════════════
-//  ADMİN PANELİ MODAL
-// ════════════════════════════════════════════════════════════
 function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSuperAdmin }) {
   const [yeniForm, setYeniForm] = useState({ kullaniciAdi:"", sifre:"", yetki:"Kullanıcı" });
   const [sifreForm, setSifreForm] = useState({ eski:"", yeni:"", tekrar:"" });
@@ -337,7 +326,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
       <div style={{ background:"#1a1d2e", borderRadius:24, width:580, maxHeight:"85vh", overflow:"auto",
         border:"1px solid #2a2d3e", boxShadow:"0 30px 80px rgba(0,0,0,.6)", display:"flex", flexDirection:"column", maxWidth:"92%" }}>
 
-        {/* Başlık */}
         <div style={{ padding:"22px 28px", borderBottom:"1px solid #2a2d3e", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#1a1d2e", zIndex:1 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={{ width:40, height:40, borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#ef4444)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>⚙️</div>
@@ -350,7 +338,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
         </div>
 
         <div style={{ padding:28 }}>
-          {/* Yeni Kullanıcı Ekle */}
           <div style={{ background:"#13162a", borderRadius:16, padding:20, marginBottom:24, border:"1px solid #2a2d3e" }}>
             <div style={{ fontSize:14, fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
               <span style={{ background:"rgba(46,213,115,.15)", color:"#2ed573", padding:"3px 10px", borderRadius:20, fontSize:12 }}>＋</span> Yeni Kullanıcı Ekle
@@ -383,7 +370,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
             </button>
           </div>
 
-          {/* Yönetici Şifresi */}
           <div style={{ background:"#13162a", borderRadius:16, padding:20, marginBottom:24, border:"1px solid rgba(108,99,255,.28)" }}>
             <div style={{ fontSize:14, fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
               <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"3px 10px", borderRadius:20, fontSize:12 }}>🔑</span> Yönetici Şifresini Değiştir
@@ -410,13 +396,11 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
             </button>
           </div>
 
-          {/* Mevcut Kullanıcılar */}
           <div style={{ fontSize:13, fontWeight:700, color:"#64748b", marginBottom:14, textTransform:"uppercase", letterSpacing:1 }}>
             Mevcut Kullanıcılar ({1 + kullanicilar.length})
           </div>
 
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            {/* Süper Admin — silinemez */}
             <div style={{ background:"#13162a", borderRadius:14, padding:"14px 18px", border:"1px solid rgba(108,99,255,.3)",
               display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -465,9 +449,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
   );
 }
 
-// ════════════════════════════════════════════════════════════
-//  ANA UYGULAMA
-// ════════════════════════════════════════════════════════════
 function App() {
   const [oturum, setOturum]         = useState(null);
   const [kullanicilar, setKullanicilar] = useState([]);
@@ -514,9 +495,6 @@ function App() {
     onCikis={handleCikis} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin}/>;
 }
 
-// ════════════════════════════════════════════════════════════
-//  STOK TAKİP PANELİ
-// ════════════════════════════════════════════════════════════
 function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar, superAdmin, setSuperAdmin }) {
   const [stok, setStok]               = useState([]);
   const [satisGecmisi, setSatisGecmisi] = useState([]);
@@ -526,12 +504,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const [duzenleModal, setDuzenleModal] = useState(null);
   const [adminModal, setAdminModal]   = useState(false);
   const [aktifSekme, setAktifSekme]   = useState("stok");
-  const bosUrunFormu = { ad:"", cins:"İşlemci", marka:"", seriNo:"", tedarikci:"", alisTarihi:"", adet:"", alisFiyati:"" };
+  const bosUrunFormu = { ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", alisTarihi:"", alisFiyati:"" };
   const [form, setForm]               = useState(bosUrunFormu);
   const [duzenleForm, setDuzenleForm] = useState(bosUrunFormu);
-  const [satisForm, setSatisForm]     = useState({ adet:"", fiyat:"", musteri:"" });
+  const [satisForm, setSatisForm]     = useState({ adet:"1", fiyat:"", musteri:"" });
   const [satisDuzenleModal, setSatisDuzenleModal] = useState(null);
-  const [satisDuzenleForm, setSatisDuzenleForm] = useState({ adet:"", fiyat:"", musteri:"" });
+  const [satisDuzenleForm, setSatisDuzenleForm] = useState({ adet:"1", fiyat:"", musteri:"" });
   const [filtre, setFiltre]           = useState("");
   const [toast, setToast]             = useState(null);
 
@@ -559,23 +537,21 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   }, []);
 
   const toplamCesit = stok.length;
-  const toplamAdet  = stok.reduce((t,p)=>t+p.adet,0);
   const kategoriSayisi = new Set(stok.map(p=>p.cins)).size;
-  const dusukStok   = stok.filter(p=>p.adet<=1).length;
   const toplamGelir = satisGecmisi.reduce((t,s)=>t+(s.fiyat*s.adet),0);
   const toplamGider = satisGecmisi.reduce((t,s)=>t+((s.alisFiyati||0)*s.adet),0);
   const toplamKar = toplamGelir - toplamGider;
 
   const parcaEkle = async () => {
-    if (!form.ad||!form.marka||!form.seriNo||!form.tedarikci||!form.alisTarihi||!form.adet||!form.alisFiyati) { showToast("Tüm alanları doldurun! Seri no, alınan yer ve alış tarihi zorunlu.","error"); return; }
+    if (!form.ad||!form.marka||!form.seriNo||!form.tedarikci||!form.alisTarihi||!form.alisFiyati) { showToast("Açıklama dışındaki tüm alanları doldurun!","error"); return; }
     try {
-      const yeni = { ...form, adet:parseInt(form.adet), alisFiyati:parseFloat(form.alisFiyati) };
+      const yeni = { ...form, adet:1, alisFiyati:parseFloat(form.alisFiyati) };
       const [eklenen] = await dbInsert("products", toProduct(yeni));
       setStok(prev=>[...prev, fromProduct(eklenen)]);
       setForm(bosUrunFormu);
       setYeniParcaModal(false); showToast("Ürün eklendi ✓");
     } catch {
-      showToast("Ürün eklenemedi! Supabase kolonlarını güncellediğinden emin ol.", "error");
+      showToast("Ürün eklenemedi!", "error");
     }
   };
 
@@ -588,20 +564,20 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       cins: parca.cins,
       marka: parca.marka,
       seriNo: parca.seriNo || "",
+      aciklama: parca.aciklama || "",
       tedarikci: parca.tedarikci || "",
       alisTarihi: parca.alisTarihi || "",
-      adet: String(parca.adet),
+      adet: "1",
       alisFiyati: String(parca.alisFiyati)
     });
   };
 
   const parcaGuncelle = async () => {
-    if (!duzenleForm.ad || !duzenleForm.marka || !duzenleForm.seriNo || !duzenleForm.tedarikci || !duzenleForm.alisTarihi || duzenleForm.adet === "" || duzenleForm.alisFiyati === "") { showToast("Tüm alanları doldurun!","error"); return; }
-    const adet = parseInt(duzenleForm.adet);
+    if (!duzenleForm.ad || !duzenleForm.marka || !duzenleForm.seriNo || !duzenleForm.tedarikci || !duzenleForm.alisTarihi || duzenleForm.alisFiyati === "") { showToast("Açıklama dışındaki tüm alanları doldurun!","error"); return; }
     const alisFiyati = parseFloat(duzenleForm.alisFiyati);
-    if (Number.isNaN(adet) || adet < 0 || Number.isNaN(alisFiyati) || alisFiyati < 0) { showToast("Adet ve fiyat geçerli olmalı!","error"); return; }
+    if (Number.isNaN(alisFiyati) || alisFiyati < 0) { showToast("Maliyet geçerli olmalı!","error"); return; }
     try {
-      const guncelParca = { ...duzenleForm, adet, alisFiyati };
+      const guncelParca = { ...duzenleForm, adet:1, alisFiyati };
       const [guncel] = await dbUpdate("products", duzenleModal.id, toProduct(guncelParca));
       setStok(prev=>prev.map(p=>p.id===duzenleModal.id?fromProduct(guncel):p));
       setDuzenleModal(null);
@@ -612,33 +588,26 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   };
 
   const satisOnayla = async () => {
-    if (!satisForm.adet||!satisForm.fiyat||!satisForm.musteri) { showToast("Tüm satış bilgilerini girin!","error"); return; }
-    const adet = parseInt(satisForm.adet);
+    if (!satisForm.fiyat||!satisForm.musteri) { showToast("Tüm satış bilgilerini girin!","error"); return; }
     const parca = stok.find(p=>p.id===satisModal.id);
-    if (adet>parca.adet) { showToast("Yeterli stok yok!","error"); return; }
-    const yeniAdet = parca.adet - adet;
     try {
-      const [guncelUrun] = await dbUpdate("products", satisModal.id, { quantity:yeniAdet });
+      await dbUpdate("products", satisModal.id, { quantity:0 });
       const [satis] = await dbInsert("sales", {
         product_id:parca.id,
         product_name:parca.ad,
         type:parca.cins,
         brand:parca.marka,
         serial_no:parca.seriNo || null,
-        quantity:adet,
+        quantity:1,
         sale_price:parseFloat(satisForm.fiyat),
         purchase_price:parca.alisFiyati,
         customer:satisForm.musteri,
         sold_by:kullanici
       });
-      if (yeniAdet <= 0) {
-        try { await dbDelete("products", satisModal.id); } catch {}
-        setStok(prev=>prev.filter(p=>p.id!==satisModal.id));
-      } else {
-        setStok(prev=>prev.map(p=>p.id===satisModal.id?fromProduct(guncelUrun):p));
-      }
+      try { await dbDelete("products", satisModal.id); } catch {}
+      setStok(prev=>prev.filter(p=>p.id!==satisModal.id));
       setSatisGecmisi(prev=>[fromSale(satis),...prev]);
-      setSatisModal(null); setSatisForm({adet:"",fiyat:"",musteri:""}); showToast(`${adet} adet satış tamamlandı ✓`);
+      setSatisModal(null); setSatisForm({adet:"1",fiyat:"",musteri:""}); showToast(`Satış tamamlandı ✓`);
     } catch {
       showToast("Satış kaydedilemedi!", "error");
     }
@@ -677,11 +646,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <div class="field"><div class="label">Marka</div><div class="value">${satis.marka}</div></div>
             <div class="field"><div class="label">Müşteri / Alıcı</div><div class="value">${satis.musteri}</div></div>
             <div class="field"><div class="label">Teslim Eden Personel</div><div class="value">${satis.satanKullanici || "-"}</div></div>
-            <div class="field" style="grid-column: span 2;"><div class="label">Miktar</div><div class="value">${satis.adet} Adet</div></div>
           </div>
           <div class="total">
             <div class="grid" style="grid-template-columns: 1fr;">
-              <div><div class="label">Toplam Hizmet/Ürün Bedeli</div><div class="money green">${(satis.fiyat * satis.adet).toLocaleString("tr-TR")} ₺</div></div>
+              <div><div class="label">Toplam Hizmet/Ürün Bedeli</div><div class="money green">${satis.fiyat.toLocaleString("tr-TR")} ₺</div></div>
             </div>
           </div>
           <div class="signatures">
@@ -698,12 +666,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     belge.focus();
   };
 
-  const urunSablonlari = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.marka, tedarikci:s.tedarikci || "" }))]
+  const urunSablonlari = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.brand, tedarikci:s.tedarikci || "" }))]
     .filter(u => u.ad)
     .filter((u, i, arr) => arr.findIndex(x => x.ad.toLowerCase() === u.ad.toLowerCase()) === i);
 
   const urunBilgisiDoldur = (ad) => {
-    const bulunan = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.marka, tedarikci:s.tedarikci || "" }))]
+    const bulunan = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.brand, tedarikci:s.tedarikci || "" }))]
       .reverse()
       .find(u => u.ad && u.ad.toLowerCase() === ad.toLowerCase());
     if (!bulunan) return;
@@ -712,13 +680,13 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
   const satisDuzenleAc = (s) => {
     setSatisDuzenleModal(s);
-    setSatisDuzenleForm({ adet:String(s.adet), fiyat:String(s.fiyat), musteri:s.musteri || "" });
+    setSatisDuzenleForm({ adet:"1", fiyat:String(s.fiyat), musteri:s.musteri || "" });
   };
 
   const satisGuncelle = async () => {
-    if (!satisDuzenleForm.adet || !satisDuzenleForm.fiyat || !satisDuzenleForm.musteri) { showToast("Satış bilgilerini doldurun!", "error"); return; }
+    if (!satisDuzenleForm.fiyat || !satisDuzenleForm.musteri) { showToast("Satış bilgilerini doldurun!", "error"); return; }
     try {
-      const [guncel] = await dbUpdate("sales", satisDuzenleModal.id, { quantity:parseInt(satisDuzenleForm.adet), sale_price:parseFloat(satisDuzenleForm.fiyat), customer:satisDuzenleForm.musteri });
+      const [guncel] = await dbUpdate("sales", satisDuzenleModal.id, { quantity:1, sale_price:parseFloat(satisDuzenleForm.fiyat), customer:satisDuzenleForm.musteri });
       setSatisGecmisi(prev=>prev.map(s=>s.id===satisDuzenleModal.id?fromSale(guncel):s));
       setSatisDuzenleModal(null);
       showToast("Satış kaydı güncellendi ✓");
@@ -750,16 +718,13 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     <div style={{ fontFamily:"'Outfit',sans-serif", background:"#0f1117", minHeight:"100vh", color:"#e2e8f0" }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 
-      {/* Toast */}
       {toast && <div style={{ position:"fixed", top:20, right:20, zIndex:9999, padding:"12px 20px",
         borderRadius:12, fontWeight:600, fontSize:14,
         background:toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
         color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)", animation:"slideIn .3s ease" }}>{toast.msg}</div>}
 
-      {/* Yönetici Paneli */}
       {adminModal && <AdminPaneli onKapat={()=>setAdminModal(false)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin}/>}
 
-      {/* Header Container — Responsive yapıldı */}
       <div className="header-container">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <div style={{ width:42, height:42, borderRadius:12, background:"linear-gradient(135deg,#6c63ff,#3a86ff)",
@@ -772,13 +737,11 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
 
         <div className="header-actions">
-          {/* Kullanıcı badge */}
           <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"6px 14px",
             borderRadius:20, fontWeight:600, fontSize:13, display:"flex", alignItems:"center", gap:6 }}>
             {yetki==="Yönetici"?"👑":"👤"} {kullanici} · {yetki}
           </span>
 
-          {/* Yönetici Paneli butonu — sadece Yönetici görür */}
           {yetki === "Yönetici" && (
             <button onClick={()=>setAdminModal(true)} style={{
               background:"linear-gradient(135deg,#f59e0b,#ef4444)", color:"#fff", border:"none",
@@ -807,25 +770,20 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       </div>
 
       <div style={{ padding:"24px 28px" }}>
-        {/* Özet Kartlar — Responsive yapıldı */}
         <div className="ozet-grid">
           {[
-            { label:"Toplam",   value:toplamCesit,    icon:"📦", color:"#6c63ff" },
-            { label:"Toplam Adet",   value:toplamAdet,      icon:"🔢", color:"#3a86ff" },
-            { label:"Kategori",      value:kategoriSayisi, icon:"🗂️", color:"#2ed573" },
-            { label:"Kritik Stok (≤1)",    value:dusukStok,      icon:"⚠️", color: dusukStok>0?"#ff6b6b":"#2ed573" },
+            { label:"Toplam Ürün", value:toplamCesit,    icon:"📦", color:"#6c63ff" },
+            { label:"Kategori",    value:kategoriSayisi, icon:"🗂️", color:"#2ed573" },
           ].map((k,i)=>(
             <div key={i} style={{ background:"#1a1d2e", borderRadius:16, padding:"18px 20px",
               border:`1px solid ${k.color}30`, position:"relative", overflow:"hidden" }}>
               <div style={{ position:"absolute", top:12, right:14, fontSize:28, opacity:.15 }}>{k.icon}</div>
               <div style={{ fontSize:11, color:"#64748b", fontWeight:600, letterSpacing:1, marginBottom:8, textTransform:"uppercase" }}>{k.label}</div>
               <div style={{ fontSize:36, fontWeight:800, color:k.color, lineHeight:1 }}>{k.value}</div>
-              {k.label==="Kritik Stok (≤1)"&&dusukStok>0&&<div style={{ fontSize:11, color:"#ff6b6b", marginTop:6, fontWeight:500 }}>Dikkat: Stok azlığı!</div>}
             </div>
           ))}
         </div>
 
-        {/* Sekmeler */}
         <div style={{ display:"flex", gap:4, marginBottom:20, background:"#1a1d2e", borderRadius:12, padding:4, width:"fit-content", border:"1px solid #2a2d3e", flexWrap:"wrap" }}>
           {[{key:"stok",label:"📋 Stok Listesi"}, ...(yoneticiMi ? [{key:"gecmis",label:"📊 Satış Geçmişi"},{key:"gelir",label:"💰 Gelir-Gider"}] : [])].map(s=>(
             <button key={s.key} onClick={()=>setAktifSekme(s.key)} style={{
@@ -843,12 +801,11 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               style={inp({ paddingLeft:42, borderRadius:12, padding:"10px 16px 10px 42px" })}/>
           </div>
 
-          {/* Tablo Wrapper — Responsive yapıldı */}
           <div className="tablo-wrapper">
             <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
               <thead>
                 <tr style={{ background:"#13162a" }}>
-                  {["Parça Adı","Cinsi","Marka","Seri No","Adet","Alış Fiyatı","Alış tarihi","İşlemler"].map((h,i)=>(
+                  {["Parça Adı","Cinsi","Marka","Seri No","Alınan Yer","Alış Fiyatı","Alış tarihi","İşlemler"].map((h,i)=>(
                     <th key={i} style={{ padding:"14px 16px", textAlign:"left", fontSize:11, fontWeight:700,
                       color:"#64748b", letterSpacing:1, textTransform:"uppercase", borderBottom:"1px solid #2a2d3e" }}>{h}</th>
                   ))}
@@ -869,14 +826,13 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                         </td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.marka}</td>
                         <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12, fontFamily:"monospace" }}>{p.seriNo||"—"}</td>
-                        <td style={{ padding:"13px 16px" }}>
-                          <span style={{ color:p.adet<=1?"#ff6b6b":p.adet<=3?"#ffa94d":"#2ed573", fontWeight:700, fontSize:15 }}>{p.adet}</span>
-                        </td>
+                        {/* ADET YERİNE ALINAN YERİN GÖSTERİLDİĞİ KISIM */}
+                        <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:600 }}>{p.tedarikci||"—"}</td>
                         <td style={{ padding:"13px 16px", color:"#a78bfa", fontWeight:600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
                         <td style={{ padding:"13px 16px" }}>
                           <div style={{ display:"flex", gap:8 }}>
-                            <button onClick={()=>{setSatisModal(p);setSatisForm({adet:"",fiyat:"",musteri:""})} } style={{
+                            <button onClick={()=>{setSatisModal(p);setSatisForm({adet:"1",fiyat:"",musteri:""})} } style={{
                               background:"rgba(46,213,115,.12)", color:"#2ed573", border:"1px solid rgba(46,213,115,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>🛒 Sat</button>
                             <button onClick={()=>duzenleAc(p)} style={{
@@ -902,7 +858,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               : <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
                   <thead>
                     <tr style={{ background:"#13162a" }}>
-                      {["Tarih","Ürün","Seri No","Cinsi","Adet","Satış Fiyatı","Müşteri","İşlemi Yapan","İşlemler"].map((h,i)=>(
+                      {["Tarih","Ürün","Seri No","Cinsi","Satış Fiyatı","Müşteri","İşlemi Yapan","İşlemler"].map((h,i)=>(
                         <th key={i} style={{ padding:"14px 16px", textAlign:"left", fontSize:11, fontWeight:700,
                           color:"#64748b", letterSpacing:1, textTransform:"uppercase", borderBottom:"1px solid #2a2d3e" }}>{h}</th>
                       ))}
@@ -921,8 +877,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                           <td style={{ padding:"13px 16px" }}>
                             <span style={{ background:rk.bg, color:rk.text, border:`1px solid ${rk.border}`, padding:"3px 10px", borderRadius:20, fontSize:12, fontWeight:600 }}>{s.cins}</span>
                           </td>
-                          <td style={{ padding:"13px 16px", color:"#3a86ff", fontWeight:700 }}>{s.adet} adet</td>
-                          <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:700 }}>{(s.fiyat*s.adet).toLocaleString("tr-TR")} ₺</td>
+                          <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:700 }}>{s.fiyat.toLocaleString("tr-TR")} ₺</td>
                           <td style={{ padding:"13px 16px" }}>
                             <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:13, fontWeight:600 }}>👤 {s.musteri}</span>
                           </td>
@@ -958,7 +913,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 : <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
                     <thead>
                       <tr style={{ background:"#13162a" }}>
-                        {["Tarih","Ürün","Adet","Gelir","Gider","Kar","Müşteri"].map((h,i)=>(
+                        {["Tarih","Ürün","Gelir","Gider","Kar","Müşteri"].map((h,i)=>(
                           <th key={i} style={{ padding:"14px 16px", textAlign:"left", fontSize:11, fontWeight:700,
                             color:"#64748b", letterSpacing:1, textTransform:"uppercase", borderBottom:"1px solid #2a2d3e" }}>{h}</th>
                         ))}
@@ -973,7 +928,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                           <tr key={s.id} style={{ borderBottom:"1px solid #2a2d3e" }}>
                             <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12 }}>{s.tarih}</td>
                             <td style={{ padding:"13px 16px", fontWeight:600, fontSize:14 }}>{s.parcaAd}</td>
-                            <td style={{ padding:"13px 16px", color:"#3a86ff", fontWeight:700 }}>{s.adet} adet</td>
                             <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:700 }}>{gelir.toLocaleString("tr-TR")} ₺</td>
                             <td style={{ padding:"13px 16px", color:"#ff6b6b", fontWeight:700 }}>{gider.toLocaleString("tr-TR")} ₺</td>
                             <td style={{ padding:"13px 16px", color:kar>=0?"#a78bfa":"#ff6b6b", fontWeight:800 }}>{kar.toLocaleString("tr-TR")} ₺</td>
@@ -991,7 +945,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         )}
       </div>
 
-      {/* Satış Detay Modal — Responsive yapıldı */}
       {satisDetayModal && (() => {
         return (
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
@@ -1012,8 +965,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   ["Marka", satisDetayModal.marka],
                   ["Müşteri", satisDetayModal.musteri],
                   ["İşlemi Yapan", satisDetayModal.satanKullanici || "—"],
-                  ["Adet", `${satisDetayModal.adet} adet`],
-                  ["Birim Satış", `${satisDetayModal.fiyat.toLocaleString("tr-TR")} ₺`],
+                  ["Satış Bedeli", `${satisDetayModal.fiyat.toLocaleString("tr-TR")} ₺`],
                 ].map(([label,value])=>(
                   <div key={label} style={{ background:"#13162a", border:"1px solid #2a2d3e", borderRadius:12, padding:"12px 14px" }}>
                     <div style={{ fontSize:11, color:"#64748b", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>{label}</div>
@@ -1030,7 +982,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         );
       })()}
       
-      {/* Ürün Ekle Modal — Responsive yapıldı */}
+      {/* ÜRÜN EKLE MODAL — ADET KALDIRILDI YERİNE ÜRÜN AÇIKLAMASI EKLENDİ */}
       <datalist id="urun-adlari">{urunSablonlari.map(u=><option key={u.ad} value={u.ad} />)}</datalist>
       {yeniParcaModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
@@ -1043,7 +995,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             {[{label:"Ürün Adı",key:"ad",placeholder:"Örn: Ryzen 7 7700X"},
               {label:"Marka",key:"marka",placeholder:"Örn: AMD, NVIDIA..."},
               {label:"Seri No",key:"seriNo",placeholder:"Zorunlu"},
-              {label:"Alınan Yer",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
+              {label:"Alınan Yer (Tedarikçi)",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
               <div key={f.key} style={{ marginBottom:14 }}>
                 <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                 <input list={f.key==="ad"?"urun-adlari":undefined} value={form[f.key]} onBlur={e=>f.key==="ad"&&urunBilgisiDoldur(e.target.value)} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} placeholder={f.placeholder} style={inp()}/>
@@ -1055,8 +1007,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
+              <input value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair ek notlar veya açıklama..." style={inp()}/>
+            </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
-              {[{label:"Adet",key:"adet",type:"number"},{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
+              {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
                   <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                   <input type={f.type} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
@@ -1071,7 +1027,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
       )}
 
-      {/* Düzenle Modal — Responsive yapıldı */}
+      {/* ÜRÜN DÜZENLE MODAL — ADET KALDIRILDI YERİNE ÜRÜN AÇIKLAMASI EKLENDİ */}
       {duzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
@@ -1083,7 +1039,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             {[{label:"Ürün Adı",key:"ad",placeholder:"Örn: Ryzen 7 7700X"},
               {label:"Marka",key:"marka",placeholder:"Örn: AMD, NVIDIA..."},
               {label:"Seri No",key:"seriNo",placeholder:"Zorunlu"},
-              {label:"Alınan Yer",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
+              {label:"Alınan Yer (Tedarikçi)",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
               <div key={f.key} style={{ marginBottom:14 }}>
                 <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                 <input value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder={f.placeholder} style={inp()}/>
@@ -1095,8 +1051,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
+              <input value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair ek notlar veya açıklama..." style={inp()}/>
+            </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
-              {[{label:"Adet",key:"adet",type:"number"},{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
+              {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
                   <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                   <input type={f.type} min="0" value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
@@ -1111,18 +1071,16 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
       )}
 
-      {/* Satış Kaydı Düzenle Modal */}
       {satisDuzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div className="modal-box" style={{ width: 400 }}>
             <div style={{ display:"flex", justifyintent:"space-between", alignItems:"center", marginBottom:20 }}><div style={{ fontSize:18, fontWeight:700 }}>✏️ Satış Kaydı Düzenle</div><button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button></div>
-            {[{label:"Adet",key:"adet",type:"number"},{label:"Satış Fiyatı (₺/adet)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(<div key={f.key} style={{ marginBottom:14 }}><label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label><input type={f.type} value={satisDuzenleForm[f.key]} onChange={e=>setSatisDuzenleForm(p=>({...p,[f.key]:e.target.value}))} style={inp()}/></div>))}
+            {[{label:"Satış Fiyatı (₺)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(<div key={f.key} style={{ marginBottom:14 }}><label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label><input type={f.type} value={satisDuzenleForm[f.key]} onChange={e=>setSatisDuzenleForm(p=>({...p,[f.key]:e.target.value}))} style={inp()}/></div>))}
             <div style={{ display:"flex", gap:10 }}><button onClick={()=>setSatisDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button><button onClick={satisGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button></div>
           </div>
         </div>
       )}
 
-      {/* Satış Modal — Responsive yapıldı */}
       {satisModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
@@ -1132,17 +1090,17 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               <button onClick={()=>setSatisModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
             <div style={{ fontSize:13, color:"#64748b", marginBottom:20 }}>
-              <span style={{ color:"#a78bfa", fontWeight:600 }}>{satisModal.ad}</span> — Stokta: <span style={{ color:"#2ed573", fontWeight:700 }}>{satisModal.adet} adet</span>
+              <span style={{ color:"#a78bfa", fontWeight:600 }}>{satisModal.ad}</span>
             </div>
-            {[{label:"Kaç Adet?",key:"adet",type:"number"},{label:"Satış Fiyatı (₺/adet)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(
+            {[{label:"Satış Fiyatı (₺)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(
               <div key={f.key} style={{ marginBottom:14 }}>
                 <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                 <input type={f.type} value={satisForm[f.key]} onChange={e=>setSatisForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
               </div>
             ))}
-            {satisForm.adet&&satisForm.fiyat&&(
+            {satisForm.fiyat&&(
               <div style={{ background:"rgba(46,213,115,.08)", border:"1px solid rgba(46,213,115,.2)", borderRadius:10, padding:"10px 14px", marginBottom:18, fontSize:13 }}>
-                Toplam: <span style={{ color:"#2ed573", fontWeight:700, fontSize:16 }}>{(parseFloat(satisForm.fiyat||0)*parseInt(satisForm.adet||0)).toLocaleString("tr-TR")} ₺</span>
+                Toplam: <span style={{ color:"#2ed573", fontWeight:700, fontSize:16 }}>{parseFloat(satisForm.fiyat||0).toLocaleString("tr-TR")} ₺</span>
               </div>
             )}
             <div style={{ display:"flex", gap:10 }}>
