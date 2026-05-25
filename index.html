@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zamazingo</title>
+  <title>Yüksek Stok</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -119,7 +119,7 @@ function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
             background:"linear-gradient(135deg,#6c63ff,#3a86ff)", display:"flex", alignItems:"center",
             justifyContent:"center", fontSize:30, boxShadow:"0 8px 30px rgba(108,99,255,.4)" }}>🖥️</div>
           <div style={{ fontSize:24, fontWeight:800, background:"linear-gradient(135deg,#a78bfa,#60a5fa)",
-            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Zamazingo</div>
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Yüksek Stok</div>
           <div style={{ fontSize:12, color:"#64748b", marginTop:4, letterSpacing:1.5 }}>STOK TAKİP SİSTEMİ</div>
         </div>
         <div style={{ fontSize:13, color:"#94a3b8", marginBottom:24, textAlign:"center" }}>Devam etmek için giriş yapın</div>
@@ -390,6 +390,18 @@ function App() {
   const [kullanicilar, setKullanicilar] = useState([]);
   const [superAdmin, setSuperAdmin] = useState(SUPER_ADMIN);
 
+  // Sayfa ilk yüklendiğinde hafızada kayıtlı oturum var mı kontrol et
+  useEffect(() => {
+    const kayitliOturum = localStorage.getItem("yuksekStok_oturum");
+    if (kayitliOturum) {
+      try {
+        setOturum(JSON.parse(kayitliOturum));
+      } catch (e) {
+        localStorage.removeItem("yuksekStok_oturum");
+      }
+    }
+  }, []);
+
   useEffect(() => {
     let aktif = true;
     dbSelect("users", "?select=*&order=created_at.asc")
@@ -404,9 +416,22 @@ function App() {
     return () => { aktif = false; };
   }, []);
 
-  if (!oturum) return <LoginEkrani onGiris={(k,y)=>setOturum({k,y})} kullanicilar={kullanicilar} superAdmin={superAdmin}/>;
+  // Giriş yapıldığında hem state'e hem localStorage'a yaz
+  const handleGiris = (k, y) => {
+    const yeniOturum = { k, y };
+    setOturum(yeniOturum);
+    localStorage.setItem("yuksekStok_oturum", JSON.stringify(yeniOturum));
+  };
+
+  // Çıkış yapıldığında temizle
+  const handleCikis = () => {
+    setOturum(null);
+    localStorage.removeItem("yuksekStok_oturum");
+  };
+
+  if (!oturum) return <LoginEkrani onGiris={handleGiris} kullanicilar={kullanicilar} superAdmin={superAdmin}/>;
   return <StokTakipIc kullanici={oturum.k} yetki={oturum.y}
-    onCikis={()=>setOturum(null)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin}/>;
+    onCikis={handleCikis} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin}/>;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -651,7 +676,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🖥️</div>
           <div>
             <div style={{ fontSize:20, fontWeight:800, letterSpacing:"-.5px", background:"linear-gradient(135deg,#a78bfa,#60a5fa)",
-              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Zamazingo</div>
+              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Yüksek Stok</div>
             <div style={{ fontSize:11, color:"#64748b", marginTop:-2, letterSpacing:1 }}>STOK TAKİP SİSTEMİ</div>
           </div>
         </div>
