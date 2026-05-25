@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
@@ -43,8 +43,31 @@ const dbDelete = (table, id) => dbRequest(`${table}?id=eq.${id}`, { method:"DELE
 
 const fromUser = (u) => ({ id:u.id, kullaniciAdi:u.username, sifre:u.password, yetki:u.role });
 const toUser = (u) => ({ username:u.kullaniciAdi, password:u.sifre, role:u.yetki });
-const fromProduct = (p) => ({ id:p.id, ad:p.name, cins:p.type, marka:p.brand, seriNo:p.serial_no || "", adet:Number(p.quantity)||0, alisFiyati:Number(p.purchase_price)||0, tedarikci:p.supplier || "", alisTarihi:p.purchase_date || "" });
-const toProduct = (p) => ({ name:p.ad, type:p.cins, brand:p.marka, serial_no:p.serial_no || null, quantity:Number(p.quantity)||0, purchase_price:Number(p.alisFiyati)||0, supplier:p.tedarikci || null, purchase_date:p.alisTarihi || null });
+
+// ─── STOK SIFIRLANMA HATASININ DÜZELTİLDİĞİ KISIM ──────────────────
+const fromProduct = (p) => ({
+  id: p.id,
+  ad: p.name,
+  cins: p.type,
+  marka: p.brand,
+  seriNo: p.serial_no || "",
+  adet: Number(p.quantity) !== undefined && !Number.isNaN(Number(p.quantity)) ? Number(p.quantity) : (Number(p.quantity) || 0),
+  alisFiyati: Number(p.purchase_price) || 0,
+  tedarikci: p.supplier || "",
+  alisTarihi: p.purchase_date || ""
+});
+
+const toProduct = (p) => ({
+  name: p.ad,
+  type: p.cins,
+  brand: p.marka,
+  serial_no: p.seriNo || null,
+  quantity: Number(p.adet) || 0,
+  purchase_price: Number(p.alisFiyati) || 0,
+  supplier: p.tedarikci || null,
+  purchase_date: p.alisTarihi || null
+});
+
 const fromSale = (s) => ({
   id:s.id,
   productId:s.product_id,
@@ -350,7 +373,7 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
             </div>
 
             {kullanicilar.length === 0 && (
-              <div style={{ textAlign:"center", padding:"24px", color:"#334155", fontSize:13 }}>Henüz ek kullanıcı eklenmedi</div>
+              <div style={{ textAlignment:"center", padding:"24px", color:"#334155", fontSize:13 }}>Henüz ek kullanıcı eklenmedi</div>
             )}
 
             {kullanicilar.map(u => {
@@ -564,7 +587,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     }
   };
 
-  // MÜŞTERİ TESLİM BELGESİ — TİCARİ VE MAHMUT BİLGİLER ARINDIRILDI
+  // MÜŞTERİ TESLİM BELGESİ — TİCARİ GİZLİ VERİLER ARINDIRILDI
   const satisYazdir = (satis) => {
     const belge = window.open("", "_blank", "width=760,height=900");
     if (!belge) { showToast("Yazdırma penceresi açılamadı!", "error"); return; }
@@ -619,12 +642,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     belge.focus();
   };
 
-  const urunSablonlari = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.marka, tedarikci:s.tedarikci || "" }))]
+  const urunSablonlari = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.brand, tedarikci:s.tedarikci || "" }))]
     .filter(u => u.ad)
     .filter((u, i, arr) => arr.findIndex(x => x.ad.toLowerCase() === u.ad.toLowerCase()) === i);
 
   const urunBilgisiDoldur = (ad) => {
-    const bulunan = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.marka, tedarikci:s.tedarikci || "" }))]
+    const bulunan = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.brand, tedarikci:s.tedarikci || "" }))]
       .reverse()
       .find(u => u.ad && u.ad.toLowerCase() === ad.toLowerCase());
     if (!bulunan) return;
@@ -781,7 +804,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.marka}</td>
                         <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12, fontFamily:"monospace" }}>{p.seriNo||"—"}</td>
                         <td style={{ padding:"13px 16px" }}>
-                          <span style={{ color:p.adet<=1?"#ff6b6b44":p.adet<=3?"#ffa94d":"#2ed573", fontWeight:700, fontSize:15 }}>{p.adet}</span>
+                          <span style={{ color:p.adet<=1?"#ff6b6b":p.adet<=3?"#ffa94d":"#2ed573", fontWeight:700, fontSize:15 }}>{p.adet}</span>
                         </td>
                         <td style={{ padding:"13px 16px", color:"#a78bfa", fontWeight:600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
