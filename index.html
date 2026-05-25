@@ -44,7 +44,6 @@ const dbDelete = (table, id) => dbRequest(`${table}?id=eq.${id}`, { method:"DELE
 const fromUser = (u) => ({ id:u.id, kullaniciAdi:u.username, sifre:u.password, yetki:u.role });
 const toUser = (u) => ({ username:u.kullaniciAdi, password:u.sifre, role:u.yetki });
 
-// ─── STOK SIFIRLANMA HATASININ DÜZELTİLDİĞİ KISIM ──────────────────
 const fromProduct = (p) => ({
   id: p.id,
   ad: p.name,
@@ -100,7 +99,6 @@ const initialStok = [
   { id: 5, ad: "990 Pro 2TB NVMe",    cins: "SSD",        marka: "Samsung", seriNo: "SAM-990-2TB", adet: 3, alisFiyati: 3900 },
 ];
 
-// ─── ORTAK INPUT STİLİ ────────────────────────────────────
 const inp = (extra = {}) => ({
   width: "100%", background: "#13162a", border: "1px solid #2a2d3e",
   borderRadius: 10, padding: "10px 14px", color: "#e2e8f0", fontSize: 14,
@@ -139,7 +137,7 @@ function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
         border:"1px solid #2a2d3e", boxShadow:"0 30px 80px rgba(0,0,0,.5)", animation:"fadeUp .5s ease" }}>
         <div style={{ textAlign:"center", marginBottom:32 }}>
           <div style={{ width:64, height:64, borderRadius:18, margin:"0 auto 14px",
-            background:"linear-gradient(135deg,#6c63ff,#3a86ff)", display:"flex", alignItems:"center",
+            background:"gradient(135deg,#6c63ff,#3a86ff)", display:"flex", alignItems:"center",
             justifyContent:"center", fontSize:30, boxShadow:"0 8px 30px rgba(108,99,255,.4)" }}>🖥️</div>
           <div style={{ fontSize:24, fontWeight:800, background:"linear-gradient(135deg,#a78bfa,#60a5fa)",
             WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>ZamazingoTr</div>
@@ -413,7 +411,6 @@ function App() {
   const [kullanicilar, setKullanicilar] = useState([]);
   const [superAdmin, setSuperAdmin] = useState(SUPER_ADMIN);
 
-  // Sayfa ilk yüklendiğinde hafızada kayıtlı oturum var mı kontrol et
   useEffect(() => {
     const kayitliOturum = localStorage.getItem("yuksekStok_oturum");
     if (kayitliOturum) {
@@ -439,14 +436,12 @@ function App() {
     return () => { aktif = false; };
   }, []);
 
-  // Giriş yapıldığında hem state'e hem localStorage'a yaz
   const handleGiris = (k, y) => {
     const yeniOturum = { k, y };
     setOturum(yeniOturum);
     localStorage.setItem("yuksekStok_oturum", JSON.stringify(yeniOturum));
   };
 
-  // Çıkış yapıldığında temizle
   const handleCikis = () => {
     setOturum(null);
     localStorage.removeItem("yuksekStok_oturum");
@@ -524,6 +519,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
   const parcaSil = async (id) => { try { await dbDelete("products", id); } catch {} setStok(prev=>prev.filter(p=>p.id!==id)); showToast("Parça silindi","info"); };
 
+  // ─── DÜZENLEME AÇILIRKEN SERİ NUMARASININ VE BAŞKA VERİLERİN YERİNDE SABİT KALMASI SAĞLANDI ───
   const duzenleAc = (parca) => {
     setDuzenleModal(parca);
     setDuzenleForm({
@@ -587,7 +583,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     }
   };
 
-  // MÜŞTERİ TESLİM BELGESİ — TİCARİ GİZLİ VERİLER ARINDIRILDI
   const satisYazdir = (satis) => {
     const belge = window.open("", "_blank", "width=760,height=900");
     if (!belge) { showToast("Yazdırma penceresi açılamadı!", "error"); return; }
@@ -642,12 +637,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     belge.focus();
   };
 
-  const urunSablonlari = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.brand, tedarikci:s.tedarikci || "" }))]
+  const urunSablonlari = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.marka, tedarikci:s.tedarikci || "" }))]
     .filter(u => u.ad)
     .filter((u, i, arr) => arr.findIndex(x => x.ad.toLowerCase() === u.ad.toLowerCase()) === i);
 
   const urunBilgisiDoldur = (ad) => {
-    const bulunan = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.brand, tedarikci:s.tedarikci || "" }))]
+    const bulunan = [...stok, ...satisGecmisi.map(s => ({ ad:s.parcaAd, cins:s.cins, marka:s.marka, tedarikci:s.tedarikci || "" }))]
       .reverse()
       .find(u => u.ad && u.ad.toLowerCase() === ad.toLowerCase());
     if (!bulunan) return;
@@ -674,11 +669,22 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     setSatisGecmisi(prev=>prev.filter(s=>s.id!==satis.id));
     showToast("Satış kaydı silindi", "info");
   };
-  const filtrelenmis = stok.filter(p=>
-    p.ad.toLowerCase().includes(filtre.toLowerCase())||
-    p.marka.toLowerCase().includes(filtre.toLowerCase())||
-    p.cins.toLowerCase().includes(filtre.toLowerCase())
-  );
+
+  // ─── STOKUN TARİHE VE EN YENİ GİRİŞE GÖRE SIRALANDIĞI ALAN ───
+  const filtrelenmis = stok
+    .filter(p=>
+      p.ad.toLowerCase().includes(filtre.toLowerCase())||
+      p.marka.toLowerCase().includes(filtre.toLowerCase())||
+      p.cins.toLowerCase().includes(filtre.toLowerCase())
+    )
+    .sort((a, b) => {
+      const tarihA = a.alisTarihi ? new Date(a.alisTarihi).getTime() : 0;
+      const tarihB = b.alisTarihi ? new Date(b.alisTarihi).getTime() : 0;
+      if (tarihB !== tarihA) {
+        return tarihB - tarihA; 
+      }
+      return b.id - a.id; 
+    });
 
   return (
     <div style={{ fontFamily:"'Outfit',sans-serif", background:"#0f1117", minHeight:"100vh", color:"#e2e8f0" }}>
@@ -963,6 +969,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           </div>
         );
       })()}
+      
       {/* Ürün Ekle Modal */}
       <datalist id="urun-adlari">{urunSablonlari.map(u=><option key={u.ad} value={u.ad} />)}</datalist>
       {yeniParcaModal && (
@@ -1043,6 +1050,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           </div>
         </div>
       )}
+
       {/* Satış Kaydı Düzenle Modal */}
       {satisDuzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
@@ -1052,7 +1060,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <div style={{ display:"flex", gap:10 }}><button onClick={()=>setSatisDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button><button onClick={satisGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button></div>
           </div>
         </div>
-      )}      {/* Satış Modal */}
+      )}
+
+      {/* Satış Modal */}
       {satisModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
