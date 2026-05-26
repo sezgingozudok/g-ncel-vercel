@@ -150,6 +150,11 @@ const CINS_RENKLERI = {
 };
 const CINS_LISTESI = ["İşlemci", "Ekran Kartı", "Anakart", "RAM", "SSD"];
 
+const initialStok = [
+  { id: 1, ad: "Ryzen 5 5600X",       cins: "İşlemci",    marka: "AMD",     seriNo: "AMD-2023-001", tedarikci: "Sinerji Bilgisayar", alisFiyati: 3200 },
+  { id: 2, ad: "RTX 4070 Ti",          cins: "Ekran Kartı",marka: "NVIDIA",  seriNo: "NV-TI-007",   tedarikci: "İtopya", alisFiyati: 18500 },
+];
+
 const inp = (extra = {}) => ({
   width: "100%", background: "#13162a", border: "1px solid #2a2d3e",
   borderRadius: 10, padding: "10px 14px", color: "#e2e8f0", fontSize: 14,
@@ -292,7 +297,7 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
   const YETKI_RENK = { "Yönetici": { bg:"rgba(108,99,255,.15)", color:"#a78bfa" }, "Kullanıcı": { bg:"rgba(46,213,115,.12)", color:"#2ed573" } };
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", backdropFilter:"blur(6px)",
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", backdropFilter:"blur(4px)",
       display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000 }}>
 
     {toast && <div style={{ position:"fixed", top:20, right:20, zIndex:9999, padding:"12px 20px",
@@ -531,8 +536,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       showToast("Açıklama dışındaki tüm alanları doldurun!", "error"); 
       return; 
     }
-    
-    // UUID ve harici kolon şeması için tamamen temizlenmiş saf veri yapısı
+
     const gonderilecekVeri = {
       name: form.ad,
       type: form.cins,
@@ -687,14 +691,21 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     setForm(p => ({ ...p, cins:bulunan.cins || p.cins, marka:bulunan.marka || p.marka, tedarikci:bulunan.tedarikci || p.tedarikci }));
   };
 
-  // En yeni eklenen benzersiz UUID'li kayıt her zaman en üstte listelenir
+  // ─── TARİHE GÖRE SIRALAMA: EN YENİ EKLENEN EN ÜSTTE KALIR ───
   const filtrelenmis = [...stok]
     .filter(p=>
       p.ad.toLowerCase().includes(filtre.toLowerCase())||
       p.marka.toLowerCase().includes(filtre.toLowerCase())||
       p.cins.toLowerCase().includes(filtre.toLowerCase())
     )
-    .reverse();
+    .sort((a, b) => {
+      const tarihA = a.alisTarihi ? new Date(a.alisTarihi).getTime() : 0;
+      const tarihB = b.alisTarihi ? new Date(b.alisTarihi).getTime() : 0;
+      if (tarihB !== tarihA) {
+        return tarihB - tarihA;
+      }
+      return b.id.localeCompare(a.id);
+    });
 
   return (
     <div style={{ fontFamily:"'Outfit',sans-serif", background:"#0f1117", minHeight:"100vh", color:"#e2e8f0" }}>
