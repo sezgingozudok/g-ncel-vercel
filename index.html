@@ -235,7 +235,7 @@ function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
   );
 }
 
-function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSuperAdmin }) {
+function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSuperAdmin, aktifKullanici }) {
   const [yeniForm, setYeniForm] = useState({ kullaniciAdi:"", sifre:"", yetki:"Kullanıcı" });
   const [sifreForm, setSifreForm] = useState({ eski:"", yeni:"", tekrar:"" });
   const [hata, setHata]         = useState("");
@@ -274,19 +274,45 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
     } catch { showToast("Kullanıcı güncellenemedi!", "error"); }
   };
 
+  // ─── VERİ AKIŞI TAMİRİ: O an paneli açan hangi kullanıcıysa onun şifresini bulup günceller ───
   const sifreDegistir = async () => {
     if (!sifreForm.eski || !sifreForm.yeni || !sifreForm.tekrar) { setHata("Şifre değiştirmek için tüm alanları doldurun!"); return; }
-    if (sifreForm.eski !== superAdmin.sifre) { setHata("Mevcut şifre hatalı!"); return; }
+    
+    const tumKullanicilar = [superAdmin, ...kullanicilar];
+    const bagliUrun = tumKullanicilar.find(u => u.kullaniciAdi === aktifKullanici);
+    
+    if (!bagliUrun || sifreForm.eski !== bagliUrun.sifre) { setHata("Mevcut şifre hatalı!"); return; }
     if (sifreForm.yeni.length < 3) { setHata("Yeni şifre en az 3 karakter olmalı!"); return; }
     if (sifreForm.yeni !== sifreForm.tekrar) { setHata("Yeni şifreler eşleşmiyor!"); return; }
+    
     try {
-      const [guncel] = await dbUpdate("users", superAdmin.id, { password:sifreForm.yeni });
-      setSuperAdmin(fromUser(guncel));
+      const [guncel] = await dbUpdate("users", bagliUrun.id, { password:sifreForm.yeni });
+      
+      if (bagliUrun.kullaniciAdi === "Yusuf") {
+        setSuperAdmin(fromUser(guncel));
+      } else {
+        setKullanicilar(prev => prev.map(k => k.id === bagliUrun.id ? fromUser(guncel) : k));
+      }
+      
       setSifreForm({ eski:"", yeni:"", tekrar:"" });
       setHata("");
-      showToast("Yönetici şifresi güncellendi ✓");
+      showToast("Şifreniz başarıyla güncellendi ✓");
     } catch {
       setHata("Şifre güncellenemedi!");
+    }
+  };
+
+  // ─── YENİ ÖZELLİK: Personelin şifresini doğrudan listeden sıfırlama/değiştirme fonksiyonu ───
+  const personelSifreDegistir = async (u) => {
+    const yeniSifre = window.prompt(`${u.kullaniciAdi} kullanıcısı için yeni bir şifre girin:`);
+    if (yeniSifre === null) return;
+    if (yeniSifre.length < 3) { alert("Şifre en az 3 karakter olmalıdır!"); return; }
+    try {
+      const [guncel] = await dbUpdate("users", u.id, { password: yeniSifre });
+      setKullanicilar(prev => prev.map(k => k.id === u.id ? fromUser(guncel) : k));
+      showToast(`${u.kullaniciAdi} şifresi güncellendi ✓`);
+    } catch {
+      showToast("Şifre güncellenemedi!", "error");
     }
   };
 
@@ -366,7 +392,7 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
 
           <div style={{ background:"#13162a", borderRadius:16, padding:20, marginBottom:24, border:"1px solid rgba(108,99,255,.28)" }}>
             <div style={{ fontSize:14, fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"3px 10px", borderRadius:20, fontSize:12 }}>🔑</span> Yönetici Şifresini Değiştir
+              <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"3px 10px", borderRadius:20, fontSize:12 }}>🔑</span> Kendi Şifreni Değiştir
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:14 }}>
               <div>
@@ -427,6 +453,8 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
                     </div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    {/* TAMİR EDİLDİ: Personel şifre sıfırlama butonu şık bir tasarımla eklendi */}
+                    <button onClick={() => personelSifreDegistir(u)} style={{ background:"rgba(245,158,11,.15)", color:"#f59e0b", border:"1px solid rgba(245,158,11,.3)", padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>🔑 Şifre Değiştir</button>
                     <select value={u.yetki} onChange={e=>kullaniciYetkiDegistir(u,e.target.value)} style={{ background:rk.bg, color:rk.color, border:`1px solid ${rk.color}55`, padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", outline:"none" }}><option>Kullanıcı</option><option>Yönetici</option></select>
                     <button onClick={()=>setSilinecek(u)} style={{
                       background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.25)",
@@ -763,7 +791,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         background:toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
         color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)", animation:"slideIn .3s ease" }}>{toast.msg}</div>}
 
-      {adminModal && <AdminPaneli onKapat={()=>setAdminModal(false)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin}/>}
+      {/* VERİ AKIŞI TAMİRİ: Admin paneline o an aktif olan kullanıcının kim olduğu gönderiliyor */}
+      {adminModal && <AdminPaneli onKapat={()=>setAdminModal(false)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin} aktifKullanici={kullanici}/>}
 
       <div className="header-container">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
