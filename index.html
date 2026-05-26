@@ -110,6 +110,7 @@ const fromProduct = (p) => ({
   marka: p.brand,
   seriNo: p.serial_no || "",
   aciklama: p.description || "", 
+  gorsel: p.image_url || "",
   alisFiyati: Number(p.purchase_price) || 0,
   tedarikci: p.supplier || "",
   alisTarihi: p.purchase_date || ""
@@ -121,6 +122,7 @@ const toProduct = (p) => ({
   brand: p.marka,
   serial_no: p.seriNo || null,
   description: p.aciklama || null, 
+  image_url: p.gorsel || null,
   purchase_price: Number(p.alisFiyati) || 0,
   supplier: p.tedarikci || null,
   purchase_date: p.alisTarihi || null
@@ -134,6 +136,7 @@ const fromSale = (s) => ({
   marka:s.brand,
   seriNo:s.serial_no || "",
   aciklama:s.description || "", 
+  gorsel:s.image_url || "",
   adet:1,
   fiyat:Number(s.sale_price)||0,
   alisFiyati:Number(s.purchase_price)||0,
@@ -278,6 +281,7 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
 
   const sifreDegistir = async () => {
     if (!sifreForm.eski || !sifreForm.yeni || !sifreForm.tekrar) { setHata("Şifre değiştirmek için tüm alanları doldurun!"); return; }
+    
     const tumKullanicilar = [superAdmin, ...kullanicilar];
     const bagliUrun = tumKullanicilar.find(u => u.kullaniciAdi === aktifKullanici);
     
@@ -287,11 +291,13 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
     
     try {
       const [guncel] = await dbUpdate("users", bagliUrun.id, { password:sifreForm.yeni });
+      
       if (bagliUrun.kullaniciAdi === "Yusuf") {
         setSuperAdmin(fromUser(guncel));
       } else {
         setKullanicilar(prev => prev.map(k => k.id === bagliUrun.id ? fromUser(guncel) : k));
       }
+      
       setSifreForm({ eski:"", yeni:"", tekrar:"" });
       setHata("");
       showToast("Şifreniz başarıyla güncellendi ✓");
@@ -550,7 +556,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     return `${d.getFullYear()}-${ay}-${gun}`;
   };
 
-  const bosUrunFormu = { ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", alisTarihi: getBugununTarihi(), alisFiyati:"" };
+  const bosUrunFormu = { ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", alisTarihi: getBugununTarihi(), alisFiyati:"", gorsel:"" };
   const [form, setForm]               = useState(bosUrunFormu);
   const [duzenleForm, setDuzenleForm] = useState(bosUrunFormu);
   const [satisForm, setSatisForm]     = useState({ fiyat:"", musteri:"" });
@@ -595,6 +601,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       brand: form.marka,
       serial_no: form.seriNo || null,
       description: form.aciklama || null,
+      image_url: form.gorsel || null,
       purchase_price: parseFloat(form.alisFiyati) || 0,
       supplier: form.tedarikci || null,
       purchase_date: form.alisTarihi || null
@@ -603,7 +610,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     try {
       const [eklenen] = await dbInsert("products", gonderilecekVeri);
       setStok(prev => [fromProduct(eklenen), ...prev]); 
-      setForm({ ...bosUrunFormu, alisTarihi: getBugununTarihi() });
+      setForm(bosUrunFormu);
       setYeniParcaModal(false); 
       showToast("Ürün başarıyla eklendi ✓");
     } catch (err) {
@@ -630,6 +637,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       marka: parca.marka,
       seriNo: parca.seriNo || "",
       aciklama: parca.aciklama || "",
+      gorsel: parca.gorsel || "",
       tedarikci: parca.tedarikci || "",
       alisTarihi: parca.alisTarihi || "",
       alisFiyati: String(parca.alisFiyati)
@@ -647,6 +655,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       brand: duzenleForm.marka,
       serial_no: duzenleForm.seriNo,
       description: duzenleForm.aciklama || null,
+      image_url: duzenleForm.gorsel || null,
       purchase_price: alisFiyati,
       supplier: duzenleForm.tedarikci || null,
       purchase_date: duzenleForm.alisTarihi || null
@@ -662,6 +671,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     }
   };
 
+  // ─── SATIŞ GEÇMİŞİ FONKSİYONLARI ───
   const satisDuzenleAc = (satis) => {
     setSatisDuzenleModal(satis);
     setSatisDuzenleForm({
@@ -718,6 +728,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         brand:parca.marka,
         serial_no:parca.seriNo || null,
         description:parca.aciklama || null, 
+        image_url:parca.gorsel || null,
         quantity:1,
         sale_price:parseFloat(satisForm.fiyat),
         purchase_price:parca.alisFiyati,
@@ -823,8 +834,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         background:toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
         color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)", animation:"slideIn .3s ease" }}>{toast.msg}</div>}
 
-      {adminModal && <AdminPaneli onKapat={()=>setAdminModal(false)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin} aktifKullanici={kullanici}/>}
-
       {/* ─── ENJEKSİYON DÜZELTİLDİ: SİLME ONAY MODALLARI BURADA EKRANA ENJEKTE EDİLDİ ─── */}
       {stokSilOnayModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
@@ -857,6 +866,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           </div>
         </div>
       )}
+
+      {/* VERİ AKIŞI TAMİRİ: Admin paneline o an aktif olan kullanıcının kim olduğu gönderiliyor */}
+      {adminModal && <AdminPaneli onKapat={()=>setAdminModal(false)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin} aktifKullanici={kullanici}/>}
 
       <div className="header-container">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -971,7 +983,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                             <button onClick={(e)=>{e.stopPropagation(); duzenleAc(p)}} style={{
                               background:"rgba(58,134,255,.12)", color:"#60a5fa", border:"1px solid rgba(58,134,255,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>✏️ Düzenle</button>
-                            <button onClick={(e)=>{e.stopPropagation(); setStokSilOnayModal(p);}} style={{
+                            <button onClick={(e)=>{e.stopPropagation(); setStokSilOnayModal(p)}} style={{
                               background:"rgba(255,107,107,.12)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)",
                               padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:13, fontFamily:"'Outfit',sans-serif" }}>🗑️</button>
                           </div>
@@ -1107,6 +1119,101 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   </div>
                 ))}
               </div>
+              {satisDetayModal.gorsel && (
+                <div style={{ marginBottom: 16, background: "#13162a", border: "1px solid #2a2d3e", borderRadius: 12, padding: "14px" }}>
+                  <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, marginBottom: 10 }}>📄 Kayıtlı Fatura / Görsel</div>
+                  
+                  <div 
+                    onClick={() => window.open(satisDetayModal.gorsel, "_blank")}
+                    title="Büyütmek için tıklayın"
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      height: "160px",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      background: "#0f1117",
+                      border: "1px solid #2a2d3e",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease-in-out",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.borderColor = "#6c63ff"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.borderColor = "#2a2d3e"; }}
+                  >
+                    <img src={satisDetayModal.gorsel} alt="Fatura" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                    <div style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "rgba(15,17,23,0.5)",
+                      opacity: 0,
+                      transition: "opacity 0.2s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontSize: 14,
+                      fontWeight: 600
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                    onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                    >
+                      🔍 Yeni Sekmede Aç
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      const gorsel = satisDetayModal.gorsel;
+                      const belge = window.open("", "_blank");
+                      if (belge) {
+                        belge.document.write(`
+                          <!doctype html>
+                          <html>
+                          <head>
+                            <title>Fatura Yazdır - ZamazingoTr</title>
+                            <style>
+                              body { margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#fff; }
+                              img { max-width:100%; max-height:100vh; object-fit:contain; }
+                              @media print {
+                                body { background:#fff; }
+                                img { max-width:100%; max-height:100%; }
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            <img src="${gorsel}" onload="window.print();" />
+                          </body>
+                          </html>
+                        `);
+                        belge.document.close();
+                      }
+                    }} 
+                    style={{
+                      width: "100%",
+                      marginTop: 10,
+                      padding: "10px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: "linear-gradient(135deg,#10b981,#059669)",
+                      color: "#fff",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontFamily: "'Outfit',sans-serif",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      boxShadow: "0 4px 12px rgba(16,185,129,.2)"
+                    }}
+                  >
+                    🖨️ Faturayı Yazdır / İndir
+                  </button>
+                </div>
+              )}
               <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
                 <button onClick={()=>setSatisDetayModal(null)} style={{ flex:1, minWidth:"100px", padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>Kapat</button>
                 <button onClick={()=>satisYazdir(satisDetayModal)} style={{ flex:2, minWidth:"160px", padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>🖨️ Teslim Formu Yazdır</button>
@@ -1146,13 +1253,61 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               <textarea value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar, arıza durumu veya detaylı açıklama..." 
                 style={{ ...inp(), height: "100px", resize: "vertical" }}/>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:14 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
                   <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                   <input type={f.type} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
                 </div>
               ))}
+            </div>
+            <div style={{ marginBottom:22 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Fatura / Görsel Yükle</label>
+              
+              <input type="file" accept="image/*" onChange={(e)=>{
+                const file = e.target.files[0];
+                if(file){
+                  const reader = new FileReader();
+                  reader.onloadend = () => { setForm(p => ({ ...p, gorsel: reader.result })); };
+                  reader.readAsDataURL(file);
+                }
+              }} style={{ display:"none" }} id="yeni-file" />
+
+              {!form.gorsel ? (
+                <label htmlFor="yeni-file" style={{
+                  display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+                  border:"2px dashed #2a2d3e", borderRadius:14, padding:"24px 16px", cursor:"pointer",
+                  background:"#13162a", transition:"all 0.2s ease-in-out", textAlign:"center"
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#6c63ff"; e.currentTarget.style.background = "#181b35"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2d3e"; e.currentTarget.style.background = "#13162a"; }}
+                >
+                  <div style={{ fontSize:28, marginBottom:8 }}>📤</div>
+                  <div style={{ fontSize:14, fontWeight:700, color:"#a78bfa", marginBottom:4 }}>Fatura / Görsel Seçin</div>
+                  <div style={{ fontSize:11, color:"#64748b" }}>PNG, JPG, JPEG (Maks. 5MB)</div>
+                </label>
+              ) : (
+                <div style={{ 
+                  background:"#13162a", border:"1px solid #2a2d3e", borderRadius:14, padding:12,
+                  display:"flex", alignItems:"center", gap:12, justifyContent:"space-between"
+                }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <div style={{ position:"relative", width:56, height:56, borderRadius:8, overflow:"hidden", background:"#0f1117", border:"1px solid #2a2d3e", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <img src={form.gorsel} alt="Fatura" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#2ed573", display:"flex", alignItems:"center", gap:4 }}>
+                        <span>✓ Belge Yüklendi</span>
+                      </div>
+                      <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Fatura görseli hazır</div>
+                    </div>
+                  </div>
+                  <button onClick={()=>setForm(p=>({...p,gorsel:""}))} style={{
+                    background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)",
+                    padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif"
+                  }}>Kaldır</button>
+                </div>
+              )}
             </div>
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setYeniParcaModal(false)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
@@ -1191,13 +1346,61 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
                 style={{ ...inp(), height: "100px", resize: "vertical" }}/>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:14 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
                   <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                   <input type={f.type} value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
                 </div>
               ))}
+            </div>
+            <div style={{ marginBottom:22 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Fatura / Görsel Güncelle</label>
+              
+              <input type="file" accept="image/*" onChange={(e)=>{
+                const file = e.target.files[0];
+                if(file){
+                  const reader = new FileReader();
+                  reader.onloadend = () => { setDuzenleForm(p => ({ ...p, gorsel: reader.result })); };
+                  reader.readAsDataURL(file);
+                }
+              }} style={{ display:"none" }} id="duzenle-file" />
+
+              {!duzenleForm.gorsel ? (
+                <label htmlFor="duzenle-file" style={{
+                  display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+                  border:"2px dashed #2a2d3e", borderRadius:14, padding:"24px 16px", cursor:"pointer",
+                  background:"#13162a", transition:"all 0.2s ease-in-out", textAlign:"center"
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#6c63ff"; e.currentTarget.style.background = "#181b35"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2d3e"; e.currentTarget.style.background = "#13162a"; }}
+                >
+                  <div style={{ fontSize:28, marginBottom:8 }}>📤</div>
+                  <div style={{ fontSize:14, fontWeight:700, color:"#a78bfa", marginBottom:4 }}>Fatura / Görsel Seçin</div>
+                  <div style={{ fontSize:11, color:"#64748b" }}>PNG, JPG, JPEG (Maks. 5MB)</div>
+                </label>
+              ) : (
+                <div style={{ 
+                  background:"#13162a", border:"1px solid #2a2d3e", borderRadius:14, padding:12,
+                  display:"flex", alignItems:"center", gap:12, justifyContent:"space-between"
+                }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <div style={{ position:"relative", width:56, height:56, borderRadius:8, overflow:"hidden", background:"#0f1117", border:"1px solid #2a2d3e", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <img src={duzenleForm.gorsel} alt="Fatura" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#2ed573", display:"flex", alignItems:"center", gap:4 }}>
+                        <span>✓ Belge Güncellendi</span>
+                      </div>
+                      <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Fatura görseli hazır</div>
+                    </div>
+                  </div>
+                  <button onClick={()=>setDuzenleForm(p=>({...p,gorsel:""}))} style={{
+                    background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)",
+                    padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif"
+                  }}>Kaldır</button>
+                </div>
+              )}
             </div>
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
