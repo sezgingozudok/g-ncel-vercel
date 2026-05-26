@@ -572,6 +572,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   // MODERN UYARI AKIŞI: Şık onay kutusu state'leri
   const [stokSilOnayModal, setStokSilOnayModal] = useState(null);
   const [satisSilOnayModal, setSatisSilOnayModal] = useState(null);
+  const [kaliciSilModal, setKaliciSilModal] = useState(null);
 
   const getBugununTarihi = () => {
     const d = new Date();
@@ -610,10 +611,13 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     if (yoneticiMi) satislariYukle().catch(()=>showToast("Satış geçmişi alınamadı!", "error"));
   }, []);
 
-  const toplamCesit = stok.length;
-  const kategoriSayisi = new Set(stok.map(p=>p.cins)).size;
-  const toplamGelir = satisGecmisi.reduce((t,s)=>t+(s.fiyat*s.adet),0);
-  const toplamGider = satisGecmisi.reduce((t,s)=>t+((s.alisFiyati||0)*s.adet),0);
+  const activeStock = stok.filter(p => !p.seriNo.startsWith("[TRASH]_"));
+  const activeSales = satisGecmisi.filter(s => !s.seriNo.startsWith("[TRASH]_"));
+
+  const toplamCesit = activeStock.length;
+  const kategoriSayisi = new Set(activeStock.map(p=>p.cins)).size;
+  const toplamGelir = activeSales.reduce((t,s)=>t+(s.fiyat*s.adet),0);
+  const toplamGider = activeSales.reduce((t,s)=>t+((s.alisFiyati||0)*s.adet),0);
   const toplamKar = toplamGelir - toplamGider;
 
   const parcaEkle = async () => {
@@ -660,13 +664,37 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   };
 
   const parcaSilOnaylandi = async (id) => {
+    const parca = stok.find(p => p.id === id);
+    if (!parca) return;
     try { 
-      await dbDelete("products", id); 
-      setStok(prev=>prev.filter(p=>p.id!==id)); 
+      const [guncel] = await dbUpdate("products", id, { serial_no: "[TRASH]_" + (parca.seriNo || "SYS") }); 
+      setStok(prev=>prev.map(p=>p.id===id?fromProduct(guncel):p)); 
       setStokSilOnayModal(null);
-      showToast("Parça başarıyla silindi","info"); 
+      showToast("Parça çöp kutusuna taşındı","info"); 
     } catch {
       showToast("Parça silinemedi!", "error");
+    }
+  };
+
+  const parcaGeriYukle = async (parca) => {
+    try {
+      const temizSeri = parca.seriNo.replace("[TRASH]_", "");
+      const [guncel] = await dbUpdate("products", parca.id, { serial_no: temizSeri });
+      setStok(prev => prev.map(p => p.id === parca.id ? fromProduct(guncel) : p));
+      showToast("Ürün geri yüklendi ✓");
+    } catch {
+      showToast("Ürün geri yüklenemedi!", "error");
+    }
+  };
+
+  const parcaKaliciSil = async (id) => {
+    try {
+      await dbDelete("products", id);
+      setStok(prev => prev.filter(p => p.id !== id));
+      setKaliciSilModal(null);
+      showToast("Ürün kalıcı olarak silindi", "info");
+    } catch {
+      showToast("Ürün silinemedi!", "error");
     }
   };
 
@@ -775,12 +803,36 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   };
 
   const satisSilOnaylandi = async (id) => {
+    const satis = satisGecmisi.find(s => s.id === id);
+    if (!satis) return;
+    try {
+      const [guncel] = await dbUpdate("sales", id, { serial_no: "[TRASH]_" + (satis.seriNo || "SYS") });
+      setSatisGecmisi(prev => prev.map(s => s.id === id ? fromSale(guncel) : s));
+      setSatisSilOnayModal(null);
+      showToast("Satış kaydı çöp kutusuna taşındı", "info");
+    } catch (err) {
+      showToast("Satış kaydı silinemedi!", "error");
+    }
+  };
+
+  const satisGeriYukle = async (satis) => {
+    try {
+      const temizSeri = satis.seriNo.replace("[TRASH]_", "");
+      const [guncel] = await dbUpdate("sales", satis.id, { serial_no: temizSeri });
+      setSatisGecmisi(prev => prev.map(s => s.id === satis.id ? fromSale(guncel) : s));
+      showToast("Satış kaydı geri yüklendi ✓");
+    } catch {
+      showToast("Satış kaydı geri yüklenemedi!", "error");
+    }
+  };
+
+  const satisKaliciSil = async (id) => {
     try {
       await dbDelete("sales", id);
       setSatisGecmisi(prev => prev.filter(s => s.id !== id));
-      setSatisSilOnayModal(null);
-      showToast("Satış kaydı silindi", "info");
-    } catch (err) {
+      setKaliciSilModal(null);
+      showToast("Satış kaydı kalıcı olarak silindi", "info");
+    } catch {
       showToast("Satış kaydı silinemedi!", "error");
     }
   };
@@ -879,6 +931,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   };
 
   const filtrelenmis = [...stok]
+    .filter(p => !p.seriNo.startsWith("[TRASH]_"))
     .filter(p=>
       p.ad.toLowerCase().includes(filtre.toLowerCase())||
       p.marka.toLowerCase().includes(filtre.toLowerCase())||
@@ -930,6 +983,35 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setSatisSilOnayModal(null)} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
               <button onClick={()=>satisSilOnaylandi(satisSilOnayModal.id)} style={{ flex:1, padding:10, borderRadius:10, border:"none", background:"linear-gradient(135deg,#ff4757,#ff6b6b)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Sil</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {kaliciSilModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
+          <div className="modal-box" style={{ width: 380, textAlign:"center", border: "1px solid rgba(255,107,107,0.3)" }}>
+            <div style={{ fontSize:40, marginBottom:14 }}>🚨</div>
+            <div style={{ fontSize:18, fontWeight:800, color: "#ff6b6b", marginBottom:8 }}>Kalıcı Olarak Silinsin mi?</div>
+            <div style={{ fontSize:13, color:"#94a3b8", marginBottom:24, lineHeight: 1.5 }}>
+              Bu öğe sistemden ve veritabanından **tamamen yok edilecektir.**<br/>
+              Orijinal Seri No: <span style={{ color:"#e2e8f0", fontWeight:600, fontFamily: "monospace" }}>{kaliciSilModal.item.seriNo.replace("[TRASH]_", "")}</span><br/>
+              <span style={{ color:"#ff4757", fontWeight:700 }}>Bu işlem kesinlikle geri alınamaz!</span>
+            </div>
+            <div style={{ display:"flex", gap:12 }}>
+              <button onClick={()=>setKaliciSilModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>Vazgeç</button>
+              <button 
+                onClick={() => {
+                  if (kaliciSilModal.type === 'product') {
+                    parcaKaliciSil(kaliciSilModal.item.id);
+                  } else {
+                    satisKaliciSil(kaliciSilModal.item.id);
+                  }
+                }} 
+                style={{ flex:1.5, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#ff4757,#ff6b6b)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14, boxShadow: "0 4px 20px rgba(255,107,107,.3)" }}
+              >
+                🗑️ Kalıcı Olarak Sil
+              </button>
             </div>
           </div>
         </div>
@@ -998,7 +1080,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
 
         <div style={{ display:"flex", gap:4, marginBottom:20, background:"#1a1d2e", borderRadius:12, padding:4, width:"fit-content", border:"1px solid #2a2d3e", flexWrap:"wrap" }}>
-          {[{key:"stok",label:"📋 Stok Listesi"}, ...(yoneticiMi ? [{key:"gecmis",label:"📊 Satış Geçmişi"},{key:"gelir",label:"💰 Gelir-Gider"}] : [])].map(s=>(
+          {[
+            {key:"stok",label:"📋 Stok Listesi"}, 
+            ...(yoneticiMi ? [{key:"gecmis",label:"📊 Satış Geçmişi"},{key:"gelir",label:"💰 Gelir-Gider"},{key:"cop",label:"🗑️ Çöp Kutusu"}] : [])
+          ].map(s=>(
             <button key={s.key} onClick={()=>setAktifSekme(s.key)} style={{
               padding:"8px 20px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:600, fontSize:13,
               fontFamily:"'Outfit',sans-serif",
@@ -1066,7 +1151,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
         {aktifSekme==="gecmis" && (
           <div className="tablo-wrapper">
-            {satisGecmisi.length===0
+            {activeSales.length===0
               ? <div style={{ textAlign:"center", padding:60, color:"#64748b" }}><div style={{ fontSize:40, marginBottom:12 }}>📭</div><div>Henüz satış yapılmadı</div></div>
               : <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
                   <thead>
@@ -1078,7 +1163,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                     </tr>
                   </thead>
                   <tbody>
-                    {satisGecmisi.map(s=>{
+                    {activeSales.map(s=>{
                       const rk=CINS_RENKLERI[s.cins]||{bg:"rgba(255,255,255,.05)",text:"#94a3b8",border:"#334155"};
                       return (
                         <tr key={s.id} style={{ borderBottom:"1px solid #2a2d3e" }}>
@@ -1121,7 +1206,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             </div>
 
             <div className="tablo-wrapper">
-              {satisGecmisi.length===0
+              {activeSales.length===0
                 ? <div style={{ textAlign:"center", padding:60, color:"#64748b" }}><div style={{ fontSize:40, marginBottom:12 }}>💰</div><div>Henüz gelir-gider kaydı yok</div></div>
                 : <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
                     <thead>
@@ -1133,7 +1218,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                       </tr>
                     </thead>
                     <tbody>
-                      {satisGecmisi.map(s=>{
+                      {activeSales.map(s=>{
                         const gelir = s.fiyat * s.adet;
                         const gider = (s.alisFiyati || 0) * s.adet;
                         const kar = gelir - gider;
@@ -1156,6 +1241,89 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             </div>
           </div>
         )}
+        {aktifSekme === "cop" && yoneticiMi && (() => {
+          const silinenUrunler = stok.filter(p => p.seriNo.startsWith("[TRASH]_"));
+          const silinenSatislar = satisGecmisi.filter(s => s.seriNo.startsWith("[TRASH]_"));
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#a78bfa", marginBottom: 12, display:"flex", alignItems:"center", gap:8 }}>📦 Silinen Ürünler ({silinenUrunler.length})</h3>
+                <div className="tablo-wrapper">
+                  {silinenUrunler.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: 40, color: "#64748b", fontSize: 13 }}>Çöp kutusunda ürün bulunmuyor</div>
+                  ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                      <thead>
+                        <tr style={{ background: "#13162a" }}>
+                          {["Parça Adı", "Cinsi", "Marka", "Orijinal Seri No", "Maliyet", "İşlemler"].map((h, i) => (
+                            <th key={i} style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, borderBottom: "1px solid #2a2d3e" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {silinenUrunler.map(p => {
+                          const originalSeriNo = p.seriNo.replace("[TRASH]_", "");
+                          return (
+                            <tr key={p.id} style={{ borderBottom: "1px solid #2a2d3e" }}>
+                              <td style={{ padding: "13px 16px", fontWeight: 600, fontSize: 14 }}>{p.ad}</td>
+                              <td style={{ padding: "13px 16px", fontSize: 13 }}>{p.cins}</td>
+                              <td style={{ padding: "13px 16px", color: "#94a3b8", fontSize: 13 }}>{p.marka}</td>
+                              <td style={{ padding: "13px 16px", color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>{originalSeriNo}</td>
+                              <td style={{ padding: "13px 16px", color: "#a78bfa", fontWeight: 600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
+                              <td style={{ padding: "13px 16px" }}>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button onClick={() => parcaGeriYukle(p)} style={{ background: "rgba(46,213,115,.12)", color: "#2ed573", border: "1px solid rgba(46,213,115,.3)", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}>↩ Geri Yükle</button>
+                                  <button onClick={() => setKaliciSilModal({ type: 'product', item: p })} style={{ background: "rgba(255,107,107,.12)", color: "#ff6b6b", border: "1px solid rgba(255,107,107,.3)", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}>🗑️ Kalıcı Sil</button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#a78bfa", marginBottom: 12, display:"flex", alignItems:"center", gap:8 }}>📊 Silinen Satış Kayıtları ({silinenSatislar.length})</h3>
+                <div className="tablo-wrapper">
+                  {silinenSatislar.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: 40, color: "#64748b", fontSize: 13 }}>Çöp kutusunda satış kaydı bulunmuyor</div>
+                  ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                      <thead>
+                        <tr style={{ background: "#13162a" }}>
+                          {["Tarih", "Ürün", "Müşteri", "Satış Fiyatı", "Satan Personel", "İşlemler"].map((h, i) => (
+                            <th key={i} style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, borderBottom: "1px solid #2a2d3e" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {silinenSatislar.map(s => (
+                          <tr key={s.id} style={{ borderBottom: "1px solid #2a2d3e" }}>
+                            <td style={{ padding: "13px 16px", color: "#64748b", fontSize: 12 }}>{s.tarih}</td>
+                            <td style={{ padding: "13px 16px", fontWeight: 600, fontSize: 14 }}>{s.parcaAd}</td>
+                            <td style={{ padding: "13px 16px", fontSize: 13 }}>{s.musteri}</td>
+                            <td style={{ padding: "13px 16px", color: "#2ed573", fontWeight: 700 }}>{s.fiyat.toLocaleString("tr-TR")} ₺</td>
+                            <td style={{ padding: "13px 16px", color: "#64748b", fontSize: 13 }}>{s.satanKullanici}</td>
+                            <td style={{ padding: "13px 16px" }}>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button onClick={() => satisGeriYukle(s)} style={{ background: "rgba(46,213,115,.12)", color: "#2ed573", border: "1px solid rgba(46,213,115,.3)", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}>↩ Geri Yükle</button>
+                                <button onClick={() => setKaliciSilModal({ type: 'sale', item: s })} style={{ background: "rgba(255,107,107,.12)", color: "#ff6b6b", border: "1px solid rgba(255,107,107,.3)", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}>🗑️ Kalıcı Sil</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {satisDetayModal && (() => {
