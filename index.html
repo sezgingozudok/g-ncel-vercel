@@ -102,7 +102,7 @@ const dbDelete = (table, id) => dbRequest(`${table}?id=eq.${id}`, { method:"DELE
 const fromUser = (u) => ({ id:u.id, kullaniciAdi:u.username, sifre:u.password, yetki:u.role });
 const toUser = (u) => ({ username:u.kullaniciAdi, password:u.sifre, role:u.yetki });
 
-// ─── VERİTABANI HATA ALMAMASI İÇİN ALANLAR GÜNCELLENDİ ───
+// ─── HARİTALAMA DÜZELTİLDİ — HATASIZ VERİ TRANSFERİ SAĞLANDI ───
 const fromProduct = (p) => ({
   id: p.id,
   ad: p.name,
@@ -110,7 +110,7 @@ const fromProduct = (p) => ({
   marka: p.brand,
   seriNo: p.serial_no || "",
   aciklama: p.description || "", 
-  adet: Number(p.quantity) || 1, 
+  adet: Number(p.quantity) !== undefined && !Number.isNaN(Number(p.quantity)) ? Number(p.quantity) : 1, 
   alisFiyati: Number(p.purchase_price) || 0,
   tedarikci: p.supplier || "",
   alisTarihi: p.purchase_date || ""
@@ -122,7 +122,7 @@ const toProduct = (p) => ({
   brand: p.marka,
   serial_no: p.seriNo || null,
   description: p.aciklama || null, 
-  quantity: 1, // Veritabanı kısıtlaması için zorunlu 1 gönderiliyor
+  quantity: Number(p.adet) !== undefined && !Number.isNaN(Number(p.adet)) ? Number(p.adet) : 1, 
   purchase_price: Number(p.alisFiyati) || 0,
   supplier: p.tedarikci || null,
   purchase_date: p.alisTarihi || null
@@ -507,9 +507,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const bosUrunFormu = { ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", alisTarihi:"", alisFiyati:"" };
   const [form, setForm]               = useState(bosUrunFormu);
   const [duzenleForm, setDuzenleForm] = useState(bosUrunFormu);
-  const [satisForm, setSatisForm]     = useState({ adet:"1", fiyat:"", musteri:"" });
+  const [satisForm, setSatisForm]     = useState({ fiyat:"", musteri:"" });
   const [satisDuzenleModal, setSatisDuzenleModal] = useState(null);
-  const [satisDuzenleForm, setSatisDuzenleForm] = useState({ adet:"1", fiyat:"", musteri:"" });
+  const [satisDuzenleForm, setSatisDuzenleForm] = useState({ fiyat:"", musteri:"" });
   const [filtre, setFiltre]           = useState("");
   const [toast, setToast]             = useState(null);
 
@@ -545,6 +545,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const parcaEkle = async () => {
     if (!form.ad||!form.marka||!form.seriNo||!form.tedarikci||!form.alisTarihi||!form.alisFiyati) { showToast("Açıklama dışındaki tüm alanları doldurun!","error"); return; }
     try {
+      // Supabase'deki quantity kısıtlamasına takılmamak için haritalama uyumlu hale getirildi
       const yeni = { ...form, adet:1, alisFiyati:parseFloat(form.alisFiyati) };
       const [eklenen] = await dbInsert("products", toProduct(yeni));
       setStok(prev=>[...prev, fromProduct(eklenen)]);
@@ -591,7 +592,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     if (!satisForm.fiyat||!satisForm.musteri) { showToast("Tüm satış bilgilerini girin!","error"); return; }
     const parca = stok.find(p=>p.id===satisModal.id);
     try {
-      await dbUpdate("products", satisModal.id, { quantity:0 });
       const [satis] = await dbInsert("sales", {
         product_id:parca.id,
         product_name:parca.ad,
@@ -607,7 +607,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       try { await dbDelete("products", satisModal.id); } catch {}
       setStok(prev=>prev.filter(p=>p.id!==satisModal.id));
       setSatisGecmisi(prev=>[fromSale(satis),...prev]);
-      setSatisModal(null); setSatisForm({adet:"1",fiyat:"",musteri:""}); showToast(`Satış tamamlandı ✓`);
+      setSatisModal(null); setSatisForm({fiyat:"",musteri:""}); showToast(`Satış tamamlandı ✓`);
     } catch {
       showToast("Satış kaydedilemedi!", "error");
     }
@@ -680,7 +680,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
   const satisDuzenleAc = (s) => {
     setSatisDuzenleModal(s);
-    setSatisDuzenleForm({ adet:"1", fiyat:String(s.fiyat), musteri:s.musteri || "" });
+    setSatisDuzenleForm({ fiyat:String(s.fiyat), musteri:s.musteri || "" });
   };
 
   const satisGuncelle = async () => {
@@ -831,7 +831,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
                         <td style={{ padding:"13px 16px" }}>
                           <div style={{ display:"flex", gap:8 }}>
-                            <button onClick={()=>{setSatisModal(p);setSatisForm({adet:"1",fiyat:"",musteri:""})} } style={{
+                            <button onClick={()=>{setSatisModal(p);setSatisForm({fiyat:"",musteri:""})} } style={{
                               background:"rgba(46,213,115,.12)", color:"#2ed573", border:"1px solid rgba(46,213,115,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>🛒 Sat</button>
                             <button onClick={()=>duzenleAc(p)} style={{
@@ -981,7 +981,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         );
       })()}
       
-      {/* ÜRÜN EKLE MODAL — TEXTAREA BÜYÜTÜLDÜ VE HATA GİDERİLDİ */}
+      {/* Ürün Ekle Modal */}
       <datalist id="urun-adlari">{urunSablonlari.map(u=><option key={u.ad} value={u.ad} />)}</datalist>
       {yeniParcaModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
@@ -1006,7 +1006,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
-            {/* Ürün Açıklaması Kutusu Genişletildi ve Textarea Yapıldı */}
+            {/* Ürün Açıklaması Kutusu */}
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
               <textarea value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar, arıza durumu veya detaylı açıklama..." 
@@ -1028,7 +1028,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
       )}
 
-      {/* ÜRÜN DÜZENLE MODAL */}
+      {/* Düzenle Modal */}
       {duzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
@@ -1052,7 +1052,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
-            {/* Düzenlemedeki Açıklama Kutusu da Genişletildi */}
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
               <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
