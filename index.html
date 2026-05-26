@@ -45,6 +45,8 @@
       padding: 28px; 
       width: 460px; 
       max-width: 92%; 
+      max-height: 90vh;
+      overflow-y: auto;
       border: 1px solid #2a2d3e; 
       box-shadow: 0 20px 60px rgba(0,0,0,.6);
     }
@@ -151,8 +153,30 @@ const CINS_RENKLERI = {
   "Anakart":    { bg: "rgba(33,150,243,0.12)",  text: "#42a5f5", border: "rgba(33,150,243,0.3)" },
   "RAM":        { bg: "rgba(156,39,176,0.12)",  text: "#ab47bc", border: "rgba(156,39,176,0.3)" },
   "SSD":        { bg: "rgba(233,30,99,0.12)",   text: "#f48fb1", border: "rgba(233,30,99,0.3)" },
+  "Kasa":       { bg: "rgba(108,99,255,0.12)",  text: "#a78bfa", border: "rgba(108,99,255,0.3)" },
 };
-const CINS_LISTESI = ["İşlemci", "Ekran Kartı", "Anakart", "RAM", "SSD"];
+const CINS_LISTESI = ["İşlemci", "Ekran Kartı", "Anakart", "RAM", "SSD", "Kasa"];
+
+const parseKasaSpecs = (desc) => {
+  const specs = { cpu: "", mb: "", ram: "", ssd: "", gpu: "", power: "", caseModel: "", notes: "" };
+  if (!desc) return specs;
+  const lines = desc.split("\n");
+  let hasSpecs = false;
+  lines.forEach(line => {
+    if (line.startsWith("İşlemci: ")) { specs.cpu = line.replace("İşlemci: ", ""); hasSpecs = true; }
+    else if (line.startsWith("Anakart: ")) { specs.mb = line.replace("Anakart: ", ""); hasSpecs = true; }
+    else if (line.startsWith("RAM: ")) { specs.ram = line.replace("RAM: ", ""); hasSpecs = true; }
+    else if (line.startsWith("SSD: ")) { specs.ssd = line.replace("SSD: ", ""); hasSpecs = true; }
+    else if (line.startsWith("Ekran Kartı: ")) { specs.gpu = line.replace("Ekran Kartı: ", ""); hasSpecs = true; }
+    else if (line.startsWith("Power: ")) { specs.power = line.replace("Power: ", ""); hasSpecs = true; }
+    else if (line.startsWith("Kasa: ")) { specs.caseModel = line.replace("Kasa: ", ""); hasSpecs = true; }
+    else if (line.startsWith("Ek Notlar: ")) { specs.notes = line.replace("Ek Notlar: ", ""); hasSpecs = true; }
+  });
+  if (!hasSpecs) {
+    specs.notes = desc;
+  }
+  return specs;
+};
 
 const inp = (extra = {}) => ({
   width: "100%", background: "#13162a", border: "1px solid #2a2d3e",
@@ -556,7 +580,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     return `${d.getFullYear()}-${ay}-${gun}`;
   };
 
-  const bosUrunFormu = { ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", alisTarihi: getBugununTarihi(), alisFiyati:"", gorsel:"" };
+  const bosUrunFormu = { 
+    ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", alisTarihi: getBugununTarihi(), alisFiyati:"", gorsel:"",
+    kasaCpu:"", kasaMb:"", kasaRam:"", kasaSsd:"", kasaGpu:"", kasaPower:"", kasaModel:"", kasaNotes:""
+  };
   const [form, setForm]               = useState(bosUrunFormu);
   const [duzenleForm, setDuzenleForm] = useState(bosUrunFormu);
   const [satisForm, setSatisForm]     = useState({ fiyat:"", musteri:"" });
@@ -590,17 +617,31 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const toplamKar = toplamGelir - toplamGider;
 
   const parcaEkle = async () => {
-    if (!form.ad || !form.marka || !form.seriNo || !form.tedarikci || !form.alisTarihi || !form.alisFiyati) { 
-      showToast("Açıklama dışındaki tüm alanları doldurun!", "error"); 
+    const isKasa = form.cins === "Kasa";
+    const hasSeriNo = isKasa ? true : !!form.seriNo;
+
+    if (!form.ad || !form.marka || !hasSeriNo || !form.tedarikci || !form.alisTarihi || !form.alisFiyati) { 
+      showToast("Gerekli tüm alanları doldurun!", "error"); 
       return; 
+    }
+
+    let aciklamaCompiled = form.aciklama;
+    let seriNoCompiled = form.seriNo;
+
+    if (isKasa) {
+      aciklamaCompiled = `İşlemci: ${form.kasaCpu || ""}\nAnakart: ${form.kasaMb || ""}\nRAM: ${form.kasaRam || ""}\nSSD: ${form.kasaSsd || ""}\nEkran Kartı: ${form.kasaGpu || ""}\nPower: ${form.kasaPower || ""}\nKasa: ${form.kasaModel || ""}\nEk Notlar: ${form.kasaNotes || ""}`;
+      
+      if (!seriNoCompiled) {
+        seriNoCompiled = `SYS-KASA-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      }
     }
 
     const gonderilecekVeri = {
       name: form.ad,
       type: form.cins,
       brand: form.marka,
-      serial_no: form.seriNo || null,
-      description: form.aciklama || null,
+      serial_no: seriNoCompiled || null,
+      description: aciklamaCompiled || null,
       image_url: form.gorsel || null,
       purchase_price: parseFloat(form.alisFiyati) || 0,
       supplier: form.tedarikci || null,
@@ -631,6 +672,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
   const duzenleAc = (parca) => {
     setDuzenleModal(parca);
+    const specs = parseKasaSpecs(parca.aciklama || "");
     setDuzenleForm({
       ad: parca.ad,
       cins: parca.cins,
@@ -640,21 +682,47 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       gorsel: parca.gorsel || "",
       tedarikci: parca.tedarikci || "",
       alisTarihi: parca.alisTarihi || "",
-      alisFiyati: String(parca.alisFiyati)
+      alisFiyati: String(parca.alisFiyati),
+      kasaCpu: specs.cpu || "",
+      kasaMb: specs.mb || "",
+      kasaRam: specs.ram || "",
+      kasaSsd: specs.ssd || "",
+      kasaGpu: specs.gpu || "",
+      kasaPower: specs.power || "",
+      kasaModel: specs.caseModel || "",
+      kasaNotes: specs.notes || ""
     });
   };
 
   const parcaGuncelle = async () => {
-    if (!duzenleForm.ad || !duzenleForm.marka || !duzenleForm.seriNo || !duzenleForm.tedarikci || !duzenleForm.alisTarihi || duzenleForm.alisFiyati === "") { showToast("Açıklama dışındaki tüm alanları doldurun!","error"); return; }
+    const isKasa = duzenleForm.cins === "Kasa";
+    const hasSeriNo = isKasa ? true : !!duzenleForm.seriNo;
+
+    if (!duzenleForm.ad || !duzenleForm.marka || !hasSeriNo || !duzenleForm.tedarikci || !duzenleForm.alisTarihi || duzenleForm.alisFiyati === "") { 
+      showToast("Gerekli tüm alanları doldurun!", "error"); 
+      return; 
+    }
+
     const alisFiyati = parseFloat(duzenleForm.alisFiyati);
     if (Number.isNaN(alisFiyati) || alisFiyati < 0) { showToast("Maliyet geçerli olmalı!","error"); return; }
     
+    let aciklamaCompiled = duzenleForm.aciklama;
+    let seriNoCompiled = duzenleForm.seriNo;
+
+    if (isKasa) {
+      aciklamaCompiled = `İşlemci: ${duzenleForm.kasaCpu || ""}\nAnakart: ${duzenleForm.kasaMb || ""}\nRAM: ${duzenleForm.kasaRam || ""}\nSSD: ${duzenleForm.kasaSsd || ""}\nEkran Kartı: ${duzenleForm.kasaGpu || ""}\nPower: ${duzenleForm.kasaPower || ""}\nKasa: ${duzenleForm.kasaModel || ""}\nEk Notlar: ${duzenleForm.kasaNotes || ""}`;
+      
+      if (!seriNoCompiled) {
+        seriNoCompiled = `SYS-KASA-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      }
+    }
+
     const guncelVeri = {
       name: duzenleForm.ad,
       type: duzenleForm.cins,
       brand: duzenleForm.marka,
-      serial_no: duzenleForm.seriNo,
-      description: duzenleForm.aciklama || null,
+      serial_no: seriNoCompiled || null,
+      description: aciklamaCompiled || null,
       image_url: duzenleForm.gorsel || null,
       purchase_price: alisFiyati,
       supplier: duzenleForm.tedarikci || null,
@@ -759,7 +827,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111827;padding-bottom:16px;margin-bottom:22px}
           h1{font-size:24px;margin:0}.sub{font-size:12px;color:#64748b;margin-top:6px;letter-spacing:1px}
           .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{border:1px solid #e2e8f0;border-radius:10px;padding:12px}
-          .label{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:6px}.value{font-size:15px;font-weight:700}
+          .label{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:6px}.value{font-size:15px;font-weight:700;white-space:pre-wrap;}
           .total{margin-top:18px;padding:16px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0}
           .money{font-size:20px;font-weight:800}.green{color:#16a34a}
           .signatures{margin-top:50px;display:flex;justify-content:space-between;padding:0 15px}
@@ -1266,7 +1334,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             </div>
             {[{label:"Ürün Adı",key:"ad",placeholder:"Örn: Ryzen 7 7700X"},
               {label:"Marka",key:"marka",placeholder:"Örn: AMD, NVIDIA..."},
-              {label:"Seri No",key:"seriNo",placeholder:"Zorunlu"},
+              {label:"Seri No",key:"seriNo",placeholder: form.cins === "Kasa" ? "İsteğe Bağlı (Sistem otomatik üretebilir)" : "Zorunlu"},
               {label:"Alınan Yer (Tedarikçi)",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
               <div key={f.key} style={{ marginBottom:14 }}>
                 <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
@@ -1279,11 +1347,38 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
-              <textarea value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar, arıza durumu veya detaylı açıklama..." 
-                style={{ ...inp(), height: "100px", resize: "vertical" }}/>
-            </div>
+            {form.cins === "Kasa" ? (
+              <div style={{ background: "#13162a", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 14, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>🖥️ Kasa Donanım Özellikleri</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[
+                    { label: "İşlemci (CPU)", key: "kasaCpu", placeholder: "Örn: i5 12400F / Ryzen 5 5600" },
+                    { label: "Anakart", key: "kasaMb", placeholder: "Örn: ASUS H610M-K" },
+                    { label: "RAM Bellek", key: "kasaRam", placeholder: "Örn: 16GB DDR4 / 32GB DDR5" },
+                    { label: "SSD / Depolama", key: "kasaSsd", placeholder: "Örn: 500GB M.2 NVMe" },
+                    { label: "Ekran Kartı (GPU)", key: "kasaGpu", placeholder: "Örn: RTX 3060 / RX 6600 (veya Dahili)" },
+                    { label: "Güç Kaynağı (Power)", key: "kasaPower", placeholder: "Örn: 650W 80+" },
+                    { label: "Kasa Modeli", key: "kasaModel", placeholder: "Örn: Rampage X-Force RGB", span: 2 },
+                    { label: "Diğer Ek Notlar", key: "kasaNotes", placeholder: "Sıvı soğutma, fan detayları veya kozmetik durum...", isTextarea: true, span: 2 }
+                  ].map(spec => (
+                    <div key={spec.key} style={{ gridColumn: spec.span ? `span ${spec.span}` : undefined, marginBottom: 4 }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>{spec.label}</label>
+                      {spec.isTextarea ? (
+                        <textarea value={form[spec.key]} onChange={e => setForm(p => ({ ...p, [spec.key]: e.target.value }))} placeholder={spec.placeholder} style={{ ...inp(), height: 60, resize: "none" }} />
+                      ) : (
+                        <input type="text" value={form[spec.key]} onChange={e => setForm(p => ({ ...p, [spec.key]: e.target.value }))} placeholder={spec.placeholder} style={inp({ padding: "8px 12px" })} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginBottom:14 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
+                <textarea value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar, arıza durumu veya detaylı açıklama..." 
+                  style={{ ...inp(), height: "100px", resize: "vertical" }}/>
+              </div>
+            )}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:14 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
@@ -1359,7 +1454,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             </div>
             {[{label:"Ürün Adı",key:"ad",placeholder:"Örn: Ryzen 7 7700X"},
               {label:"Marka",key:"marka",placeholder:"Örn: AMD, NVIDIA..."},
-              {label:"Seri No",key:"seriNo",placeholder:"Zorunlu"},
+              {label:"Seri No",key:"seriNo",placeholder: duzenleForm.cins === "Kasa" ? "İsteğe Bağlı (Sistem otomatik üretebilir)" : "Zorunlu"},
               {label:"Alınan Yer (Tedarikçi)",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
               <div key={f.key} style={{ marginBottom:14 }}>
                 <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
@@ -1372,11 +1467,38 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
-              <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
-                style={{ ...inp(), height: "100px", resize: "vertical" }}/>
-            </div>
+            {duzenleForm.cins === "Kasa" ? (
+              <div style={{ background: "#13162a", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 14, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>🖥️ Kasa Donanım Özellikleri</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[
+                    { label: "İşlemci (CPU)", key: "kasaCpu", placeholder: "Örn: i5 12400F / Ryzen 5 5600" },
+                    { label: "Anakart", key: "kasaMb", placeholder: "Örn: ASUS H610M-K" },
+                    { label: "RAM Bellek", key: "kasaRam", placeholder: "Örn: 16GB DDR4 / 32GB DDR5" },
+                    { label: "SSD / Depolama", key: "kasaSsd", placeholder: "Örn: 500GB M.2 NVMe" },
+                    { label: "Ekran Kartı (GPU)", key: "kasaGpu", placeholder: "Örn: RTX 3060 / RX 6600 (veya Dahili)" },
+                    { label: "Güç Kaynağı (Power)", key: "kasaPower", placeholder: "Örn: 650W 80+" },
+                    { label: "Kasa Modeli", key: "kasaModel", placeholder: "Örn: Rampage X-Force RGB", span: 2 },
+                    { label: "Diğer Ek Notlar", key: "kasaNotes", placeholder: "Sıvı soğutma, fan detayları veya kozmetik durum...", isTextarea: true, span: 2 }
+                  ].map(spec => (
+                    <div key={spec.key} style={{ gridColumn: spec.span ? `span ${spec.span}` : undefined, marginBottom: 4 }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>{spec.label}</label>
+                      {spec.isTextarea ? (
+                        <textarea value={duzenleForm[spec.key]} onChange={e => setDuzenleForm(p => ({ ...p, [spec.key]: e.target.value }))} placeholder={spec.placeholder} style={{ ...inp(), height: 60, resize: "none" }} />
+                      ) : (
+                        <input type="text" value={duzenleForm[spec.key]} onChange={e => setDuzenleForm(p => ({ ...p, [spec.key]: e.target.value }))} placeholder={spec.placeholder} style={inp({ padding: "8px 12px" })} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginBottom:14 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
+                <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
+                  style={{ ...inp(), height: "100px", resize: "vertical" }}/>
+              </div>
+            )}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:14 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
