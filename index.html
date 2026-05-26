@@ -133,6 +133,7 @@ const fromSale = (s) => ({
   cins:s.type,
   marka:s.brand,
   seriNo:s.serial_no || "",
+  aciklama:s.description || "", // VERİ AKIŞI TAMİRİ: Supabase'den gelen açıklama bağlandı
   adet:1,
   fiyat:Number(s.sale_price)||0,
   alisFiyati:Number(s.purchase_price)||0,
@@ -475,7 +476,7 @@ function App() {
   const handleGiris = (k, y) => {
     const yeniOturum = { k, y };
     setOturum(yeniOturum);
-    localStorage.setItem("yuksekStok_oturum", JSON.stringify(yeniOturum));
+    localStorage.setItem("yuksekStok_oturum", JSON.stringify(yeniOtum));
   };
 
   const handleCikis = () => {
@@ -650,12 +651,14 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     if (!satisForm.fiyat||!satisForm.musteri) { showToast("Tüm satış bilgilerini girin!","error"); return; }
     const parca = stok.find(p=>p.id===satisModal.id);
     try {
+      // VERİ AKIŞI TAMİRİ: Ürün satılırken description (açıklama) alanı da Supabase'e gönderiliyor
       const [satis] = await dbInsert("sales", {
         product_id:parca.id,
         product_name:parca.ad,
         type:parca.cins,
         brand:parca.marka,
         serial_no:parca.seriNo || null,
+        description:parca.aciklama || null, 
         quantity:1,
         sale_price:parseFloat(satisForm.fiyat),
         purchase_price:parca.alisFiyati,
@@ -704,6 +707,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <div class="field"><div class="label">Marka</div><div class="value">${satis.marka}</div></div>
             <div class="field"><div class="label">Müşteri / Alıcı</div><div class="value">${satis.musteri}</div></div>
             <div class="field"><div class="label">Teslim Eden Personel</div><div class="value">${satis.satanKullanici || "-"}</div></div>
+            <div class="field" style="grid-column: span 2;"><div class="label">Ürün Açıklaması / Garanti - Arıza Notu</div><div class="value">${satis.aciklama || "Not eklenmemiş"}</div></div>
           </div>
           <div class="total">
             <div class="grid" style="grid-template-columns: 1fr;">
@@ -1002,7 +1006,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   ["Müşteri", satisDetayModal.musteri],
                   ["İşlemi Yapan", satisDetayModal.satanKullanici || "—"],
                   ["Satış Bedeli", `${satisDetayModal.fiyat.toLocaleString("tr-TR")} ₺`],
-                  ["Ürün Açıklaması", satisDetayModal.aciklama || "Not eklenmemiş"]
+                  ["Ürün Açıklaması", satisDetayModal.aciklama || "Not eklenmemiş"] // BURADA DA GÜVENLİ ŞEKİLDE GÖSTERİLİYOR
                 ].map(([label,value])=>(
                   <div key={label} style={{ background:"#13162a", border:"1px solid #2a2d3e", borderRadius:12, padding:"12px 14px", gridColumn: label === "Ürün Açıklaması" ? "span 2" : undefined }}>
                     <div style={{ fontSize:11, color:"#64748b", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>{label}</div>
