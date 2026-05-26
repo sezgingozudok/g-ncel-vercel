@@ -29,7 +29,7 @@
     }
     .ozet-grid {
       display: grid; 
-      grid-template-columns: repeat(3, 1fr); /* 4'ten 3'e düşürüldü */
+      grid-template-columns: repeat(2, 1fr); 
       gap: 16px; 
       margin-bottom: 24px;
     }
@@ -102,14 +102,14 @@ const dbDelete = (table, id) => dbRequest(`${table}?id=eq.${id}`, { method:"DELE
 const fromUser = (u) => ({ id:u.id, kullaniciAdi:u.username, sifre:u.password, yetki:u.role });
 const toUser = (u) => ({ username:u.kullaniciAdi, password:u.sifre, role:u.yetki });
 
+// ─── SUPABASE GERÇEK TABLO YAPISINA GÖRE TAM UYUMLU HARİTALAMA ───
 const fromProduct = (p) => ({
-  id: p.id,
+  id: p.id, // uuid olarak metin gelir
   ad: p.name,
   cins: p.type,
   marka: p.brand,
   seriNo: p.serial_no || "",
-  aciklama: p.description || "", // Ek açıklama alanı map edildi
-  adet: 1, // Arka planda kod yapısının bozulmaması için sabit 1 bırakıldı
+  aciklama: p.description || "", 
   alisFiyati: Number(p.purchase_price) || 0,
   tedarikci: p.supplier || "",
   alisTarihi: p.purchase_date || ""
@@ -120,8 +120,7 @@ const toProduct = (p) => ({
   type: p.cins,
   brand: p.marka,
   serial_no: p.seriNo || null,
-  description: p.aciklama || null, // Ek açıklama alanı veritabanına aktarılıyor
-  quantity: 1, 
+  description: p.aciklama || null, 
   purchase_price: Number(p.alisFiyati) || 0,
   supplier: p.tedarikci || null,
   purchase_date: p.alisTarihi || null
@@ -134,7 +133,7 @@ const fromSale = (s) => ({
   cins:s.type,
   marka:s.brand,
   seriNo:s.serial_no || "",
-  adet:Number(s.quantity)||1,
+  adet:1,
   fiyat:Number(s.sale_price)||0,
   alisFiyati:Number(s.purchase_price)||0,
   musteri:s.customer,
@@ -150,11 +149,6 @@ const CINS_RENKLERI = {
   "SSD":        { bg: "rgba(233,30,99,0.12)",   text: "#f48fb1", border: "rgba(233,30,99,0.3)" },
 };
 const CINS_LISTESI = ["İşlemci", "Ekran Kartı", "Anakart", "RAM", "SSD"];
-
-const initialStok = [
-  { id: 1, ad: "Ryzen 5 5600X",       cins: "İşlemci",    marka: "AMD",     seriNo: "AMD-2023-001", tedarikci: "Sinerji Bilgisayar", alisFiyati: 3200 },
-  { id: 2, ad: "RTX 4070 Ti",          cins: "Ekran Kartı",marka: "NVIDIA",  seriNo: "NV-TI-007",   tedarikci: "İtopya", alisFiyati: 18500 },
-];
 
 const inp = (extra = {}) => ({
   width: "100%", background: "#13162a", border: "1px solid #2a2d3e",
@@ -306,22 +300,17 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
       background: toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
       color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>{toast.msg}</div>}
 
-      {/* Silme onay modalı */}
-      {silinecek && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
-          <div style={{ background:"#1a1d2e", borderRadius:20, padding:28, width:360, maxwidth:"90%", border:"1px solid #2a2d3e", textAlign:"center" }}>
-            <div style={{ fontSize:36, marginBottom:12 }}>⚠️</div>
-            <div style={{ fontSize:16, fontWeight:700, marginBottom:8 }}>Kullanıcıyı sil?</div>
-            <div style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>
-              <span style={{ color:"#a78bfa", fontWeight:600 }}>{silinecek.kullaniciAdi}</span> adlı kullanıcı silinecek. Bu işlem geri alınamaz.
-            </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setSilinecek(null)} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
-              <button onClick={()=>kullaniciSil(silinecek.id)} style={{ flex:1, padding:10, borderRadius:10, border:"none", background:"linear-gradient(135deg,#ff4757,#ff6b6b)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Sil</button>
-            </div>
-          </div>
+      <div style={{ background:"#1a1d2e", borderRadius:20, padding:28, width:360, maxwidth:"90%", border:"1px solid #2a2d3e", textAlign:"center" }}>
+        <div style={{ fontSize:36, marginBottom:12 }}>⚠️</div>
+        <div style={{ fontSize:16, fontWeight:700, marginBottom:8 }}>Kullanıcıyı sil?</div>
+        <div style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>
+          <span style={{ color:"#a78bfa", fontWeight:600 }}>{silinecek.kullaniciAdi}</span> adlı kullanıcı silinecek. Bu işlem geri alınamaz.
         </div>
-      )}
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={()=>setSilinecek(null)} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
+          <button onClick={()=>kullaniciSil(silinecek.id)} style={{ flex:1, padding:10, borderRadius:10, border:"none", background:"linear-gradient(135deg,#ff4757,#ff6b6b)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Sil</button>
+        </div>
+      </div>
 
       <div style={{ background:"#1a1d2e", borderRadius:24, width:580, maxHeight:"85vh", overflow:"auto",
         border:"1px solid #2a2d3e", boxShadow:"0 30px 80px rgba(0,0,0,.6)", display:"flex", flexDirection:"column", maxWidth:"92%" }}>
@@ -507,9 +496,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const bosUrunFormu = { ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", alisTarihi:"", alisFiyati:"" };
   const [form, setForm]               = useState(bosUrunFormu);
   const [duzenleForm, setDuzenleForm] = useState(bosUrunFormu);
-  const [satisForm, setSatisForm]     = useState({ adet:"1", fiyat:"", musteri:"" });
+  const [satisForm, setSatisForm]     = useState({ fiyat:"", musteri:"" });
   const [satisDuzenleModal, setSatisDuzenleModal] = useState(null);
-  const [satisDuzenleForm, setSatisDuzenleForm] = useState({ adet:"1", fiyat:"", musteri:"" });
+  const [satisDuzenleForm, setSatisDuzenleForm] = useState({ fiyat:"", musteri:"" });
   const [filtre, setFiltre]           = useState("");
   const [toast, setToast]             = useState(null);
 
@@ -518,11 +507,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
   const stokYukle = async () => {
     const rows = await dbSelect("products", "?select=*&order=created_at.asc");
-    if (rows.length === 0) {
-      const eklenenler = await dbInsert("products", initialStok.map(toProduct));
-      setStok(eklenenler.map(fromProduct));
-      return;
-    }
     setStok(rows.map(fromProduct));
   };
 
@@ -543,15 +527,31 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const toplamKar = toplamGelir - toplamGider;
 
   const parcaEkle = async () => {
-    if (!form.ad||!form.marka||!form.seriNo||!form.tedarikci||!form.alisTarihi||!form.alisFiyati) { showToast("Açıklama dışındaki tüm alanları doldurun!","error"); return; }
+    if (!form.ad || !form.marka || !form.seriNo || !form.tedarikci || !form.alisTarihi || !form.alisFiyati) { 
+      showToast("Açıklama dışındaki tüm alanları doldurun!", "error"); 
+      return; 
+    }
+    
+    // UUID ve harici kolon şeması için tamamen temizlenmiş saf veri yapısı
+    const gonderilecekVeri = {
+      name: form.ad,
+      type: form.cins,
+      brand: form.marka,
+      serial_no: form.seriNo || null,
+      description: form.aciklama || null,
+      purchase_price: parseFloat(form.alisFiyati) || 0,
+      supplier: form.tedarikci || null,
+      purchase_date: form.alisTarihi || null
+    };
+
     try {
-      const yeni = { ...form, adet:1, alisFiyati:parseFloat(form.alisFiyati) };
-      const [eklenen] = await dbInsert("products", toProduct(yeni));
-      setStok(prev=>[...prev, fromProduct(eklenen)]);
+      const [eklenen] = await dbInsert("products", gonderilecekVeri);
+      setStok(prev => [fromProduct(eklenen), ...prev]); 
       setForm(bosUrunFormu);
-      setYeniParcaModal(false); showToast("Ürün eklendi ✓");
-    } catch {
-      showToast("Ürün eklenemedi!", "error");
+      setYeniParcaModal(false); 
+      showToast("Ürün başarıyla eklendi ✓");
+    } catch (err) {
+      showToast("Ürün eklenemedi! Bağlantıyı kontrol edin.", "error");
     }
   };
 
@@ -567,7 +567,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       aciklama: parca.aciklama || "",
       tedarikci: parca.tedarikci || "",
       alisTarihi: parca.alisTarihi || "",
-      adet: "1",
       alisFiyati: String(parca.alisFiyati)
     });
   };
@@ -576,9 +575,20 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     if (!duzenleForm.ad || !duzenleForm.marka || !duzenleForm.seriNo || !duzenleForm.tedarikci || !duzenleForm.alisTarihi || duzenleForm.alisFiyati === "") { showToast("Açıklama dışındaki tüm alanları doldurun!","error"); return; }
     const alisFiyati = parseFloat(duzenleForm.alisFiyati);
     if (Number.isNaN(alisFiyati) || alisFiyati < 0) { showToast("Maliyet geçerli olmalı!","error"); return; }
+    
+    const guncelVeri = {
+      name: duzenleForm.ad,
+      type: duzenleForm.cins,
+      brand: duzenleForm.marka,
+      serial_no: duzenleForm.seriNo,
+      description: duzenleForm.aciklama || null,
+      purchase_price: alisFiyati,
+      supplier: duzenleForm.tedarikci || null,
+      purchase_date: duzenleForm.alisTarihi || null
+    };
+
     try {
-      const guncelParca = { ...duzenleForm, adet:1, alisFiyati };
-      const [guncel] = await dbUpdate("products", duzenleModal.id, toProduct(guncelParca));
+      const [guncel] = await dbUpdate("products", duzenleModal.id, guncelVeri);
       setStok(prev=>prev.map(p=>p.id===duzenleModal.id?fromProduct(guncel):p));
       setDuzenleModal(null);
       showToast("Parça güncellendi ✓");
@@ -591,7 +601,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     if (!satisForm.fiyat||!satisForm.musteri) { showToast("Tüm satış bilgilerini girin!","error"); return; }
     const parca = stok.find(p=>p.id===satisModal.id);
     try {
-      await dbUpdate("products", satisModal.id, { quantity:0 });
       const [satis] = await dbInsert("sales", {
         product_id:parca.id,
         product_name:parca.ad,
@@ -607,7 +616,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       try { await dbDelete("products", satisModal.id); } catch {}
       setStok(prev=>prev.filter(p=>p.id!==satisModal.id));
       setSatisGecmisi(prev=>[fromSale(satis),...prev]);
-      setSatisModal(null); setSatisForm({adet:"1",fiyat:"",musteri:""}); showToast(`Satış tamamlandı ✓`);
+      setSatisModal(null); setSatisForm({fiyat:"",musteri:""}); showToast(`Satış tamamlandı ✓`);
     } catch {
       showToast("Satış kaydedilemedi!", "error");
     }
@@ -678,41 +687,14 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     setForm(p => ({ ...p, cins:bulunan.cins || p.cins, marka:bulunan.marka || p.marka, tedarikci:bulunan.tedarikci || p.tedarikci }));
   };
 
-  const satisDuzenleAc = (s) => {
-    setSatisDuzenleModal(s);
-    setSatisDuzenleForm({ adet:"1", fiyat:String(s.fiyat), musteri:s.musteri || "" });
-  };
-
-  const satisGuncelle = async () => {
-    if (!satisDuzenleForm.fiyat || !satisDuzenleForm.musteri) { showToast("Satış bilgilerini doldurun!", "error"); return; }
-    try {
-      const [guncel] = await dbUpdate("sales", satisDuzenleModal.id, { quantity:1, sale_price:parseFloat(satisDuzenleForm.fiyat), customer:satisDuzenleForm.musteri });
-      setSatisGecmisi(prev=>prev.map(s=>s.id===satisDuzenleModal.id?fromSale(guncel):s));
-      setSatisDuzenleModal(null);
-      showToast("Satış kaydı güncellendi ✓");
-    } catch { showToast("Satış kaydı güncellenemedi!", "error"); }
-  };
-
-  const satisSil = async (satis) => {
-    try { await dbDelete("sales", satis.id); } catch {}
-    setSatisGecmisi(prev=>prev.filter(s=>s.id!==satis.id));
-    showToast("Satış kaydı silindi", "info");
-  };
-
-  const filtrelenmis = stok
+  // En yeni eklenen benzersiz UUID'li kayıt her zaman en üstte listelenir
+  const filtrelenmis = [...stok]
     .filter(p=>
       p.ad.toLowerCase().includes(filtre.toLowerCase())||
       p.marka.toLowerCase().includes(filtre.toLowerCase())||
       p.cins.toLowerCase().includes(filtre.toLowerCase())
     )
-    .sort((a, b) => {
-      const tarihA = a.alisTarihi ? new Date(a.alisTarihi).getTime() : 0;
-      const tarihB = b.alisTarihi ? new Date(b.alisTarihi).getTime() : 0;
-      if (tarihB !== tarihA) {
-        return tarihB - tarihA; 
-      }
-      return b.id - a.id; 
-    });
+    .reverse();
 
   return (
     <div style={{ fontFamily:"'Outfit',sans-serif", background:"#0f1117", minHeight:"100vh", color:"#e2e8f0" }}>
@@ -826,13 +808,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                         </td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.marka}</td>
                         <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12, fontFamily:"monospace" }}>{p.seriNo||"—"}</td>
-                        {/* ADET YERİNE ALINAN YERİN GÖSTERİLDİĞİ KISIM */}
                         <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:600 }}>{p.tedarikci||"—"}</td>
                         <td style={{ padding:"13px 16px", color:"#a78bfa", fontWeight:600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
                         <td style={{ padding:"13px 16px" }}>
                           <div style={{ display:"flex", gap:8 }}>
-                            <button onClick={()=>{setSatisModal(p);setSatisForm({adet:"1",fiyat:"",musteri:""})} } style={{
+                            <button onClick={()=>{setSatisModal(p);setSatisForm({fiyat:"",musteri:""})} } style={{
                               background:"rgba(46,213,115,.12)", color:"#2ed573", border:"1px solid rgba(46,213,115,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>🛒 Sat</button>
                             <button onClick={()=>duzenleAc(p)} style={{
@@ -966,10 +947,11 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   ["Müşteri", satisDetayModal.musteri],
                   ["İşlemi Yapan", satisDetayModal.satanKullanici || "—"],
                   ["Satış Bedeli", `${satisDetayModal.fiyat.toLocaleString("tr-TR")} ₺`],
+                  ["Ürün Açıklaması", satisDetayModal.aciklama || "Not eklenmemiş"]
                 ].map(([label,value])=>(
-                  <div key={label} style={{ background:"#13162a", border:"1px solid #2a2d3e", borderRadius:12, padding:"12px 14px" }}>
+                  <div key={label} style={{ background:"#13162a", border:"1px solid #2a2d3e", borderRadius:12, padding:"12px 14px", gridColumn: label === "Ürün Açıklaması" ? "span 2" : undefined }}>
                     <div style={{ fontSize:11, color:"#64748b", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>{label}</div>
-                    <div style={{ fontSize:14, fontWeight:700 }}>{value}</div>
+                    <div style={{ fontSize:14, fontWeight:700, whiteSpace:"pre-wrap" }}>{value}</div>
                   </div>
                 ))}
               </div>
@@ -982,7 +964,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         );
       })()}
       
-      {/* ÜRÜN EKLE MODAL — ADET KALDIRILDI YERİNE ÜRÜN AÇIKLAMASI EKLENDİ */}
+      {/* Ürün Ekle Modal */}
       <datalist id="urun-adlari">{urunSablonlari.map(u=><option key={u.ad} value={u.ad} />)}</datalist>
       {yeniParcaModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
@@ -1009,7 +991,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             </div>
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
-              <input value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair ek notlar veya açıklama..." style={inp()}/>
+              <textarea value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar, arıza durumu veya detaylı açıklama..." 
+                style={{ ...inp(), height: "100px", resize: "vertical" }}/>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
@@ -1027,7 +1010,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
       )}
 
-      {/* ÜRÜN DÜZENLE MODAL — ADET KALDIRILDI YERİNE ÜRÜN AÇIKLAMASI EKLENDİ */}
+      {/* Düzenle Modal */}
       {duzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
@@ -1053,13 +1036,14 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             </div>
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
-              <input value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair ek notlar veya açıklama..." style={inp()}/>
+              <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
+                style={{ ...inp(), height: "100px", resize: "vertical" }}/>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
                   <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
-                  <input type={f.type} min="0" value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
+                  <input type={f.type} value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
                 </div>
               ))}
             </div>
@@ -1113,7 +1097,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
       <style>{`
         @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-        input::placeholder{color:#3d4a5c} select option{background:#1a1d2e}
+        input::placeholder, textarea::placeholder{color:#3d4a5c} select option{background:#1a1d2e}
         *{scrollbar-width:thin;scrollbar-color:#2a2d3e transparent}
       `}</style>
     </div>
