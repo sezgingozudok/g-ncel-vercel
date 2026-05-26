@@ -1124,7 +1124,27 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, marginBottom: 10 }}>📄 Kayıtlı Fatura / Görsel</div>
                   
                   <div 
-                    onClick={() => window.open(satisDetayModal.gorsel, "_blank")}
+                    onClick={() => {
+                      const win = window.open("", "_blank");
+                      if (win) {
+                        win.document.write(`
+                          <!doctype html>
+                          <html>
+                          <head>
+                            <title>Fatura Önizleme - ZamazingoTr</title>
+                            <style>
+                              body { margin:0; display:flex; justify-content:center; align-items:center; background:#0f1117; min-height:100vh; font-family:'Outfit',sans-serif; }
+                              img { max-width:95%; max-height:95vh; object-fit:contain; border-radius:12px; box-shadow:0 30px 70px rgba(0,0,0,0.6); border:1px solid #2a2d3e; }
+                            </style>
+                          </head>
+                          <body>
+                            <img src="${satisDetayModal.gorsel}" alt="Fatura" />
+                          </body>
+                          </html>
+                        `);
+                        win.document.close();
+                      }
+                    }}
                     title="Büyütmek için tıklayın"
                     style={{
                       position: "relative",
@@ -1140,25 +1160,36 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                       cursor: "pointer",
                       transition: "all 0.2s ease-in-out",
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.borderColor = "#6c63ff"; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.borderColor = "#2a2d3e"; }}
+                    onMouseEnter={e => { 
+                      e.currentTarget.style.transform = "scale(1.02)"; 
+                      e.currentTarget.style.borderColor = "#6c63ff";
+                      const ov = e.currentTarget.querySelector('.detay-overlay');
+                      if (ov) ov.style.opacity = "1";
+                    }}
+                    onMouseLeave={e => { 
+                      e.currentTarget.style.transform = "scale(1)"; 
+                      e.currentTarget.style.borderColor = "#2a2d3e"; 
+                      const ov = e.currentTarget.querySelector('.detay-overlay');
+                      if (ov) ov.style.opacity = "0";
+                    }}
                   >
                     <img src={satisDetayModal.gorsel} alt="Fatura" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
-                    <div style={{
-                      position: "absolute",
-                      inset: 0,
-                      background: "rgba(15,17,23,0.5)",
-                      opacity: 0,
-                      transition: "opacity 0.2s ease",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#fff",
-                      fontSize: 14,
-                      fontWeight: 600
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                    onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                    <div 
+                      className="detay-overlay"
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "rgba(15,17,23,0.5)",
+                        opacity: 0,
+                        transition: "opacity 0.2s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#fff",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        pointerEvents: "none"
+                      }}
                     >
                       🔍 Yeni Sekmede Aç
                     </div>
