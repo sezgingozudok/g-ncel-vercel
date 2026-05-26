@@ -29,7 +29,7 @@
     }
     .ozet-grid {
       display: grid; 
-      grid-template-columns: repeat(3, 1fr); /* 4'ten 3'e düşürüldü */
+      grid-template-columns: repeat(2, 1fr); 
       gap: 16px; 
       margin-bottom: 24px;
     }
@@ -102,14 +102,15 @@ const dbDelete = (table, id) => dbRequest(`${table}?id=eq.${id}`, { method:"DELE
 const fromUser = (u) => ({ id:u.id, kullaniciAdi:u.username, sifre:u.password, yetki:u.role });
 const toUser = (u) => ({ username:u.kullaniciAdi, password:u.sifre, role:u.yetki });
 
+// ─── VERİTABANI HATA ALMAMASI İÇİN ALANLAR GÜNCELLENDİ ───
 const fromProduct = (p) => ({
   id: p.id,
   ad: p.name,
   cins: p.type,
   marka: p.brand,
   seriNo: p.serial_no || "",
-  aciklama: p.description || "", // Ek açıklama alanı map edildi
-  adet: 1, // Arka planda kod yapısının bozulmaması için sabit 1 bırakıldı
+  aciklama: p.description || "", 
+  adet: Number(p.quantity) || 1, 
   alisFiyati: Number(p.purchase_price) || 0,
   tedarikci: p.supplier || "",
   alisTarihi: p.purchase_date || ""
@@ -120,8 +121,8 @@ const toProduct = (p) => ({
   type: p.cins,
   brand: p.marka,
   serial_no: p.seriNo || null,
-  description: p.aciklama || null, // Ek açıklama alanı veritabanına aktarılıyor
-  quantity: 1, 
+  description: p.aciklama || null, 
+  quantity: 1, // Veritabanı kısıtlaması için zorunlu 1 gönderiliyor
   purchase_price: Number(p.alisFiyati) || 0,
   supplier: p.tedarikci || null,
   purchase_date: p.alisTarihi || null
@@ -306,7 +307,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
       background: toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
       color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>{toast.msg}</div>}
 
-      {/* Silme onay modalı */}
       {silinecek && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
           <div style={{ background:"#1a1d2e", borderRadius:20, padding:28, width:360, maxwidth:"90%", border:"1px solid #2a2d3e", textAlign:"center" }}>
@@ -826,7 +826,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                         </td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.marka}</td>
                         <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12, fontFamily:"monospace" }}>{p.seriNo||"—"}</td>
-                        {/* ADET YERİNE ALINAN YERİN GÖSTERİLDİĞİ KISIM */}
                         <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:600 }}>{p.tedarikci||"—"}</td>
                         <td style={{ padding:"13px 16px", color:"#a78bfa", fontWeight:600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
@@ -982,7 +981,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         );
       })()}
       
-      {/* ÜRÜN EKLE MODAL — ADET KALDIRILDI YERİNE ÜRÜN AÇIKLAMASI EKLENDİ */}
+      {/* ÜRÜN EKLE MODAL — TEXTAREA BÜYÜTÜLDÜ VE HATA GİDERİLDİ */}
       <datalist id="urun-adlari">{urunSablonlari.map(u=><option key={u.ad} value={u.ad} />)}</datalist>
       {yeniParcaModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
@@ -1007,9 +1006,11 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
+            {/* Ürün Açıklaması Kutusu Genişletildi ve Textarea Yapıldı */}
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
-              <input value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair ek notlar veya açıklama..." style={inp()}/>
+              <textarea value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar, arıza durumu veya detaylı açıklama..." 
+                style={{ ...inp(), height: "100px", resize: "vertical" }}/>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
@@ -1027,7 +1028,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
       )}
 
-      {/* ÜRÜN DÜZENLE MODAL — ADET KALDIRILDI YERİNE ÜRÜN AÇIKLAMASI EKLENDİ */}
+      {/* ÜRÜN DÜZENLE MODAL */}
       {duzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
@@ -1051,15 +1052,17 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
+            {/* Düzenlemedeki Açıklama Kutusu da Genişletildi */}
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
-              <input value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair ek notlar veya açıklama..." style={inp()}/>
+              <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
+                style={{ ...inp(), height: "100px", resize: "vertical" }}/>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
                   <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
-                  <input type={f.type} min="0" value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
+                  <input type={f.type} value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
                 </div>
               ))}
             </div>
@@ -1113,7 +1116,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
       <style>{`
         @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-        input::placeholder{color:#3d4a5c} select option{background:#1a1d2e}
+        input::placeholder, textarea::placeholder{color:#3d4a5c} select option{background:#1a1d2e}
         *{scrollbar-width:thin;scrollbar-color:#2a2d3e transparent}
       `}</style>
     </div>
