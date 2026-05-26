@@ -194,7 +194,7 @@ function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
         <div style={{ fontSize:13, color:"#94a3b8", marginBottom:24, textAlign:"center" }}>Devam etmek için giriş yapın</div>
 
         <div style={{ marginBottom:14 }}>
-          <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:7, textTransform:"uppercase", letterSpacing:1 }}>Kullanıcı Adı</label>
+          <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Kullanıcı Adı</label>
           <div style={{ position:"relative" }}>
             <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", fontSize:15 }}>👤</span>
             <input value={kAdi} onChange={e=>{setKAdi(e.target.value);setHata("");}}
@@ -204,7 +204,7 @@ function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
         </div>
 
         <div style={{ marginBottom:22 }}>
-          <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:7, textTransform:"uppercase", letterSpacing:1 }}>Şifre</label>
+          <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Şifre</label>
           <div style={{ position:"relative" }}>
             <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", fontSize:15 }}>🔒</span>
             <input type={sifreGoster?"text":"password"} value={sifre}
@@ -302,11 +302,11 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
 
       {silinecek && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
-          <div style={{ background:"#1a1d2e", borderRadius:20, padding:28, width:360, maxwidth:"90%", border:"1px solid #2a2d3e", textAlign:"center" }}>
+          <div style={{ background:"#1a1d2e", borderRadius:20, padding:28, width:360, maxWidth:"90%", border:"1px solid #2a2d3e", textAlign:"center" }}>
             <div style={{ fontSize:36, marginBottom:12 }}>⚠️</div>
             <div style={{ fontSize:16, fontWeight:700, marginBottom:8 }}>Kullanıcıyı sil?</div>
             <div style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>
-              <span style={{ color:"#a78bfa", fontWeight:600 }}>{silinecek.kullaniciAdi}</span> adlı kullanıcı silinecek. This işlem geri alınamaz.
+              <span style={{ color:"#a78bfa", fontWeight:600 }}>{silinecek.kullaniciAdi}</span> adlı kullanıcı silinecek. Bu işlem geri alınamaz.
             </div>
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setSilinecek(null)} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
@@ -319,15 +319,15 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
       <div style={{ background:"#1a1d2e", borderRadius:24, width:580, maxHeight:"85vh", overflow:"auto",
         border:"1px solid #2a2d3e", boxShadow:"0 30px 80px rgba(0,0,0,.6)", display:"flex", flexDirection:"column", maxWidth:"92%" }}>
 
-        <div style={{ padding:"22px 28px", borderBottom:"1px solid #2a2d3e", display:"flex", alignItems:"center", justifycontent:"space-between", position:"sticky", top:0, background:"#1a1d2e", zIndex:1 }}>
+        <div style={{ padding:"22px 28px", borderBottom:"1px solid #2a2d3e", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#1a1d2e", zIndex:1 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:40, height:40, borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#ef4444)", display:"flex", alignItems:"center", justifycontent:"center", fontSize:20 }}>⚙️</div>
+            <div style={{ width:40, height:40, borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#ef4444)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>⚙️</div>
             <div>
               <div style={{ fontSize:17, fontWeight:800 }}>Yönetici Paneli</div>
               <div style={{ fontSize:11, color:"#64748b", letterSpacing:.8 }}>KULLANICI YÖNETİMİ</div>
             </div>
           </div>
-          <button onClick={onKapat} style={{ background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", width:34, height:34, borderRadius:10, cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifycontent:"center" }}>✕</button>
+          <button onClick={onKapat} style={{ background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", width:34, height:34, borderRadius:10, cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
         </div>
 
         <div style={{ padding:28 }}>
@@ -395,9 +395,9 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
 
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             <div style={{ background:"#13162a", borderRadius:14, padding:"14px 18px", border:"1px solid rgba(108,99,255,.3)",
-              display:"flex", alignItems:"center", justifycontent:"space-between" }}>
+              display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#6c63ff,#3a86ff)", display:"flex", alignItems:"center", justifycontent:"center", fontSize:16 }}>👑</div>
+                <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#6c63ff,#3a86ff)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👑</div>
                 <div>
                   <div style={{ fontWeight:700, fontSize:14 }}>{superAdmin.kullaniciAdi}</div>
                   <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Şifre: {"•".repeat(superAdmin.sifre.length)}</div>
@@ -417,16 +417,16 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
               const rk = YETKI_RENK[u.yetki] || YETKI_RENK["Kullanıcı"];
               return (
                 <div key={u.id} style={{ background:"#13162a", borderRadius:14, padding:"14px 18px", border:"1px solid #2a2d3e",
-                  display:"flex", alignItems:"center", justifycontent:"space-between", flexWrap:"wrap", gap:10 }}>
+                  display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                    <div style={{ width:36, height:36, borderRadius:10, background:"rgba(58,134,255,.15)", display:"flex", alignItems:"center", justifycontent:"center", fontSize:16 }}>👤</div>
+                    <div style={{ width:36, height:36, borderRadius:10, background:"rgba(58,134,255,.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👤</div>
                     <div>
                       <div style={{ fontWeight:700, fontSize:14 }}>{u.kullaniciAdi}</div>
                       <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Şifre: {"•".repeat(u.sifre.length)}</div>
                     </div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <select value={u.yetki} onChange={e=>kullaniciYetkiDegistir(u,e.target.value)} style={{ background:rk.bg, color:rk.color, border:`1px solid ${rk.color}55`, padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"\'Outfit\',sans-serif", outline:"none" }}><option>Kullanıcı</option><option>Yönetici</option></select>
+                    <select value={u.yetki} onChange={e=>kullaniciYetkiDegistir(u,e.target.value)} style={{ background:rk.bg, color:rk.color, border:`1px solid ${rk.color}55`, padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", outline:"none" }}><option>Kullanıcı</option><option>Yönetici</option></select>
                     <button onClick={()=>setSilinecek(u)} style={{
                       background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.25)",
                       padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"'Outfit',sans-serif",
@@ -600,7 +600,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     }
   };
 
-  // ─── TAMİR EDİLEN VE EKLENEN SATIŞ GEÇMİŞİ FONKSİYONLARI BURADA ───
+  // ─── SATIŞ GEÇMİŞİ FONKSİYONLARI ───
   const satisDuzenleAc = (satis) => {
     setSatisDuzenleModal(satis);
     setSatisDuzenleForm({
@@ -688,7 +688,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{border:1px solid #e2e8f0;border-radius:10px;padding:12px}
           .label{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:6px}.value{font-size:15px;font-weight:700}
           .total{margin-top:18px;padding:16px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0}
-          .money{font-size:20px;font-weight:800}.green{color:#16a34a}.purple{color:#7c3aed}
+          .money{font-size:20px;font-weight:800}.green{color:#16a34a}
           .signatures{margin-top:50px;display:flex;justify-content:space-between;padding:0 15px}
           .sig-box{text-align:center;width:220px;border-top:1px dashed #94a3b8;padding-top:12px;font-size:13px;font-weight:700;color:#334155}
           @media print{body{background:#fff;padding:0}.form{border:0;box-shadow:none}.no-print{display:none}}
@@ -765,7 +765,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       <div className="header-container">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <div style={{ width:42, height:42, borderRadius:12, background:"linear-gradient(135deg,#6c63ff,#3a86ff)",
-            display:"flex", alignItems:"center", justifycontent:"center", fontSize:20 }}>🖥️</div>
+            display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🖥️</div>
           <div>
             <div style={{ fontSize:20, fontWeight:800, letterSpacing:"-.5px", background:"linear-gradient(135deg,#a78bfa,#60a5fa)",
               WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>ZamazingoTr</div>
@@ -815,13 +815,13 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <div key={i} style={{ background:"#1a1d2e", borderRadius:16, padding:"18px 20px",
               border:`1px solid ${k.color}30`, position:"relative", overflow:"hidden" }}>
               <div style={{ position:"absolute", top:12, right:14, fontSize:28, opacity:.15 }}>{k.icon}</div>
-              <div style={{ fontSize:11, color:"#64748b", fontWeight:600, letterSpacing:1, marginbottom:8, textTransform:"uppercase" }}>{k.label}</div>
+              <div style={{ fontSize:11, color:"#64748b", fontWeight:600, letterSpacing:1, marginBottom:8, textTransform:"uppercase" }}>{k.label}</div>
               <div style={{ fontSize:36, fontWeight:800, color:k.color, lineHeight:1 }}>{k.value}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ display:"flex", gap:4, marginbottom:20, background:"#1a1d2e", borderRadius:12, padding:4, width:"fit-content", border:"1px solid #2a2d3e", flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:4, marginBottom:20, background:"#1a1d2e", borderRadius:12, padding:4, width:"fit-content", border:"1px solid #2a2d3e", flexWrap:"wrap" }}>
           {[{key:"stok",label:"📋 Stok Listesi"}, ...(yoneticiMi ? [{key:"gecmis",label:"📊 Satış Geçmişi"},{key:"gelir",label:"💰 Gelir-Gider"}] : [])].map(s=>(
             <button key={s.key} onClick={()=>setAktifSekme(s.key)} style={{
               padding:"8px 20px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:600, fontSize:13,
@@ -832,7 +832,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
 
         {aktifSekme==="stok" && <>
-          <div style={{ marginbottom:16, position:"relative" }}>
+          <div style={{ marginBottom:16, position:"relative" }}>
             <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", fontSize:16 }}>🔍</span>
             <input value={filtre} onChange={e=>setFiltre(e.target.value)} placeholder="Parça adı, marka veya kategori ara..."
               style={inp({ paddingLeft:42, borderRadius:12, padding:"10px 16px 10px 42px" })}/>
@@ -864,7 +864,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.marka}</td>
                         <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12, fontFamily:"monospace" }}>{p.seriNo||"—"}</td>
                         <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:600 }}>{p.tedarikci||"—"}</td>
-                        <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
+                        <td style={{ padding:"13px 16px", color:"#a78bfa", fontWeight:600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
                         <td style={{ padding:"13px 16px" }}>
                           <div style={{ display:"flex", gap:8 }}>
@@ -890,7 +890,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         {aktifSekme==="gecmis" && (
           <div className="tablo-wrapper">
             {satisGecmisi.length===0
-              ? <div style={{ textAlign:"center", padding:60, color:"#64748b" }}><div style={{ fontSize:40, marginbottom:12 }}>📭</div><div>Henüz satış yapılmadı</div></div>
+              ? <div style={{ textAlign:"center", padding:60, color:"#64748b" }}><div style={{ fontSize:40, marginBottom:12 }}>📭</div><div>Henüz satış yapılmadı</div></div>
               : <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
                   <thead>
                     <tr style={{ background:"#13162a" }}>
@@ -929,7 +929,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         )}
         {aktifSekme==="gelir" && (
           <div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:16, marginbottom:16 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:16, marginBottom:16 }}>
               {[
                 { label:"Toplam Gelir", value:toplamGelir, color:"#2ed573", icon:"💵" },
                 { label:"Toplam Gider", value:toplamGider, color:"#ff6b6b", icon:"📉" },
@@ -937,7 +937,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               ].map((k,i)=>(
                 <div key={i} style={{ background:"#1a1d2e", borderRadius:16, padding:"18px 20px", border:`1px solid ${k.color}35`, position:"relative", overflow:"hidden" }}>
                   <div style={{ position:"absolute", top:12, right:14, fontSize:28, opacity:.15 }}>{k.icon}</div>
-                  <div style={{ fontSize:11, color:"#64748b", fontWeight:700, letterSpacing:1, marginbottom:8, textTransform:"uppercase" }}>{k.label}</div>
+                  <div style={{ fontSize:11, color:"#64748b", fontWeight:700, letterSpacing:1, marginBottom:8, textTransform:"uppercase" }}>{k.label}</div>
                   <div style={{ fontSize:28, fontWeight:800, color:k.color }}>{k.value.toLocaleString("tr-TR")} ₺</div>
                 </div>
               ))}
@@ -945,7 +945,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
             <div className="tablo-wrapper">
               {satisGecmisi.length===0
-                ? <div style={{ textAlign:"center", padding:60, color:"#64748b" }}><div style={{ fontSize:40, marginbottom:12 }}>💰</div><div>Henüz gelir-gider kaydı yok</div></div>
+                ? <div style={{ textAlign:"center", padding:60, color:"#64748b" }}><div style={{ fontSize:40, marginBottom:12 }}>💰</div><div>Henüz gelir-gider kaydı yok</div></div>
                 : <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
                     <thead>
                       <tr style={{ background:"#13162a" }}>
@@ -984,16 +984,16 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       {satisDetayModal && (() => {
         return (
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
-            display:"flex", alignItems:"center", justifycontent:"center", zIndex:1000 }}>
+            display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
             <div className="modal-box">
-              <div style={{ display:"flex", justifycontent:"space-between", alignItems:"center", marginbottom:20 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
                 <div>
                   <div style={{ fontSize:18, fontWeight:800 }}>📄 Satış Bilgisi</div>
                   <div style={{ fontSize:12, color:"#64748b", marginTop:4 }}>{satisDetayModal.tarih}</div>
                 </div>
                 <button onClick={()=>setSatisDetayModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:12, marginbottom:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:12, marginBottom:16 }}>
                 {[
                   ["Ürün", satisDetayModal.parcaAd],
                   ["Seri No", satisDetayModal.seriNo || "—"],
@@ -1005,7 +1005,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   ["Ürün Açıklaması", satisDetayModal.aciklama || "Not eklenmemiş"]
                 ].map(([label,value])=>(
                   <div key={label} style={{ background:"#13162a", border:"1px solid #2a2d3e", borderRadius:12, padding:"12px 14px", gridColumn: label === "Ürün Açıklaması" ? "span 2" : undefined }}>
-                    <div style={{ fontSize:11, color:"#64748b", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginbottom:5 }}>{label}</div>
+                    <div style={{ fontSize:11, color:"#64748b", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>{label}</div>
                     <div style={{ fontSize:14, fontWeight:700, whiteSpace:"pre-wrap" }}>{value}</div>
                   </div>
                 ))}
@@ -1023,9 +1023,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       <datalist id="urun-adlari">{urunSablonlari.map(u=><option key={u.ad} value={u.ad} />)}</datalist>
       {yeniParcaModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
-          display:"flex", alignItems:"center", justifycontent:"center", zIndex:1000 }}>
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div className="modal-box">
-            <div style={{ display:"flex", justifycontent:"space-between", alignItems:"center", marginbottom:24 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <div style={{ fontSize:18, fontWeight:700 }}>📦 Ürün Ekle</div>
               <button onClick={()=>setYeniParcaModal(false)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
@@ -1033,26 +1033,26 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               {label:"Marka",key:"marka",placeholder:"Örn: AMD, NVIDIA..."},
               {label:"Seri No",key:"seriNo",placeholder:"Zorunlu"},
               {label:"Alınan Yer (Tedarikçi)",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
-              <div key={f.key} style={{ marginbottom:14 }}>
-                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
+              <div key={f.key} style={{ marginBottom:14 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                 <input list={f.key==="ad"?"urun-adlari":undefined} value={form[f.key]} onBlur={e=>f.key==="ad"&&urunBilgisiDoldur(e.target.value)} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} placeholder={f.placeholder} style={inp()}/>
               </div>
             ))}
-            <div style={{ marginbottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Cinsi</label>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Cinsi</label>
               <select value={form.cins} onChange={e=>setForm(p=>({...p,cins:e.target.value}))} style={inp()}>
-                {CINS_LISTESI.map(c={c} <option key={c}>{c}</option>)}
+                {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ marginbottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
               <textarea value={form.aciklama} onChange={e=>setForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar, arıza durumu veya detaylı açıklama..." 
                 style={{ ...inp(), height: "100px", resize: "vertical" }}/>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginbottom:22 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
-                  <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
+                  <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                   <input type={f.type} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
                 </div>
               ))}
@@ -1068,9 +1068,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       {/* Düzenle Modal */}
       {duzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
-          display:"flex", alignItems:"center", justifycontent:"center", zIndex:1000 }}>
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div className="modal-box">
-            <div style={{ display:"flex", justifycontent:"space-between", alignItems:"center", marginbottom:24 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <div style={{ fontSize:18, fontWeight:700 }}>✏️ Parça Düzenle</div>
               <button onClick={()=>setDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
@@ -1078,26 +1078,26 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               {label:"Marka",key:"marka",placeholder:"Örn: AMD, NVIDIA..."},
               {label:"Seri No",key:"seriNo",placeholder:"Zorunlu"},
               {label:"Alınan Yer (Tedarikçi)",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
-              <div key={f.key} style={{ marginbottom:14 }}>
-                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
+              <div key={f.key} style={{ marginBottom:14 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                 <input value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder={f.placeholder} style={inp()}/>
               </div>
             ))}
-            <div style={{ marginbottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Cinsi</label>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Cinsi</label>
               <select value={duzenleForm.cins} onChange={e=>setDuzenleForm(p=>({...p,cins:e.target.value}))} style={inp()}>
                 {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ marginbottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
               <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
                 style={{ ...inp(), height: "100px", resize: "vertical" }}/>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginbottom:22 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:22 }}>
               {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
                 <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
-                  <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
+                  <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                   <input type={f.type} value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
                 </div>
               ))}
@@ -1111,10 +1111,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       )}
 
       {satisDuzenleModal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifycontent:"center", zIndex:1000 }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div className="modal-box" style={{ width: 400 }}>
-            <div style={{ display:"flex", justifycontent:"space-between", alignItems:"center", marginbottom:20 }}><div style={{ fontSize:18, fontWeight:700 }}>✏️ Satış Kaydı Düzenle</div><button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button></div>
-            {[{label:"Satış Fiyatı (₺)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(<div key={f.key} style={{ marginbottom:14 }}><label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label><input type={f.type} value={satisDuzenleForm[f.key]} onChange={e=>setSatisDuzenleForm(p=>({...p,[f.key]:e.target.value}))} style={inp()}/></div>))}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}><div style={{ fontSize:18, fontWeight:700 }}>✏️ Satış Kaydı Düzenle</div><button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button></div>
+            {[{label:"Satış Fiyatı (₺)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(<div key={f.key} style={{ marginBottom:14 }}><label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label><input type={f.type} value={satisDuzenleForm[f.key]} onChange={e=>setSatisDuzenleForm(p=>({...p,[f.key]:e.target.value}))} style={inp()}/></div>))}
             <div style={{ display:"flex", gap:10 }}><button onClick={()=>setSatisDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button><button onClick={satisGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button></div>
           </div>
         </div>
@@ -1122,23 +1122,23 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
 
       {satisModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
-          display:"flex", alignItems:"center", justifycontent:"center", zIndex:1000 }}>
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div className="modal-box" style={{ width: 400 }}>
-            <div style={{ display:"flex", justifycontent:"space-between", alignItems:"center", marginbottom:6 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
               <div style={{ fontSize:18, fontWeight:700 }}>🛒 Satış Yap</div>
               <button onClick={()=>setSatisModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
-            <div style={{ fontSize:13, color:"#64748b", marginbottom:20 }}>
+            <div style={{ fontSize:13, color:"#64748b", marginBottom:20 }}>
               <span style={{ color:"#a78bfa", fontWeight:600 }}>{satisModal.ad}</span>
             </div>
             {[{label:"Satış Fiyatı (₺)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(
-              <div key={f.key} style={{ marginbottom:14 }}>
-                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginbottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
+              <div key={f.key} style={{ marginBottom:14 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
                 <input type={f.type} value={satisForm[f.key]} onChange={e=>setSatisForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
               </div>
             ))}
             {satisForm.fiyat&&(
-              <div style={{ background:"rgba(46,213,115,.08)", border:"1px solid rgba(46,213,115,.2)", borderRadius:10, marginbottom:18, fontSize:13 }}>
+              <div style={{ background:"rgba(46,213,115,.08)", border:"1px solid rgba(46,213,115,.2)", borderRadius:10, padding:"10px 14px", marginBottom:18, fontSize:13 }}>
                 Toplam: <span style={{ color:"#2ed573", fontWeight:700, fontSize:16 }}>{parseFloat(satisForm.fiyat||0).toLocaleString("tr-TR")} ₺</span>
               </div>
             )}
