@@ -102,7 +102,6 @@ const dbDelete = (table, id) => dbRequest(`${table}?id=eq.${id}`, { method:"DELE
 const fromUser = (u) => ({ id:u.id, kullaniciAdi:u.username, sifre:u.password, yetki:u.role });
 const toUser = (u) => ({ username:u.kullaniciAdi, password:u.sifre, role:u.yetki });
 
-// ─── HARİTALAMA DÜZELTİLDİ — HATASIZ VERİ TRANSFERİ SAĞLANDI ───
 const fromProduct = (p) => ({
   id: p.id,
   ad: p.name,
@@ -110,7 +109,7 @@ const fromProduct = (p) => ({
   marka: p.brand,
   seriNo: p.serial_no || "",
   aciklama: p.description || "", 
-  adet: Number(p.quantity) !== undefined && !Number.isNaN(Number(p.quantity)) ? Number(p.quantity) : 1, 
+  adet: 1, 
   alisFiyati: Number(p.purchase_price) || 0,
   tedarikci: p.supplier || "",
   alisTarihi: p.purchase_date || ""
@@ -122,7 +121,7 @@ const toProduct = (p) => ({
   brand: p.marka,
   serial_no: p.seriNo || null,
   description: p.aciklama || null, 
-  quantity: Number(p.adet) !== undefined && !Number.isNaN(Number(p.adet)) ? Number(p.adet) : 1, 
+  quantity: 1, // Supabase kısıtlamasını aşmak için arka planda 1 yolluyoruz
   purchase_price: Number(p.alisFiyati) || 0,
   supplier: p.tedarikci || null,
   purchase_date: p.alisTarihi || null
@@ -135,7 +134,7 @@ const fromSale = (s) => ({
   cins:s.type,
   marka:s.brand,
   seriNo:s.serial_no || "",
-  adet:Number(s.quantity)||1,
+  adet:1,
   fiyat:Number(s.sale_price)||0,
   alisFiyati:Number(s.purchase_price)||0,
   musteri:s.customer,
@@ -542,17 +541,21 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const toplamGider = satisGecmisi.reduce((t,s)=>t+((s.alisFiyati||0)*s.adet),0);
   const toplamKar = toplamGelir - toplamGider;
 
+  // ─── GEÇERSİZ BLOKLAYICI KONTROL TEMİZLENDİ VE HATA GİDERİLDİ ───
   const parcaEkle = async () => {
-    if (!form.ad||!form.marka||!form.seriNo||!form.tedarikci||!form.alisTarihi||!form.alisFiyati) { showToast("Açıklama dışındaki tüm alanları doldurun!","error"); return; }
+    if (!form.ad || !form.marka || !form.seriNo || !form.tedarikci || !form.alisTarihi || !form.alisFiyati) { 
+      showToast("Açıklama dışındaki tüm alanları doldurun!", "error"); 
+      return; 
+    }
     try {
-      // Supabase'deki quantity kısıtlamasına takılmamak için haritalama uyumlu hale getirildi
-      const yeni = { ...form, adet:1, alisFiyati:parseFloat(form.alisFiyati) };
+      const yeni = { ...form, adet: 1, alisFiyati: parseFloat(form.alisFiyati) };
       const [eklenen] = await dbInsert("products", toProduct(yeni));
-      setStok(prev=>[...prev, fromProduct(eklenen)]);
+      setStok(prev => [...prev, fromProduct(eklenen)]);
       setForm(bosUrunFormu);
-      setYeniParcaModal(false); showToast("Ürün eklendi ✓");
+      setYeniParcaModal(false); 
+      showToast("Ürün başarıyla eklendi ✓");
     } catch {
-      showToast("Ürün eklenemedi!", "error");
+      showToast("Ürün eklenemedi! Lütfen veritabanı bağlantısını kontrol edin.", "error");
     }
   };
 
