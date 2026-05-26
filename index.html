@@ -102,14 +102,14 @@ const dbDelete = (table, id) => dbRequest(`${table}?id=eq.${id}`, { method:"DELE
 const fromUser = (u) => ({ id:u.id, kullaniciAdi:u.username, sifre:u.password, yetki:u.role });
 const toUser = (u) => ({ username:u.kullaniciAdi, password:u.sifre, role:u.yetki });
 
-// ─── SUPABASE GERÇEK TABLO YAPISINA GÖRE TAM UYUMLU HARİTALAMA ───
 const fromProduct = (p) => ({
-  id: p.id, // uuid olarak metin gelir
+  id: p.id,
   ad: p.name,
   cins: p.type,
   marka: p.brand,
   seriNo: p.serial_no || "",
   aciklama: p.description || "", 
+  adet: 1, 
   alisFiyati: Number(p.purchase_price) || 0,
   tedarikci: p.supplier || "",
   alisTarihi: p.purchase_date || ""
@@ -121,6 +121,7 @@ const toProduct = (p) => ({
   brand: p.marka,
   serial_no: p.seriNo || null,
   description: p.aciklama || null, 
+  quantity: 1,
   purchase_price: Number(p.alisFiyati) || 0,
   supplier: p.tedarikci || null,
   purchase_date: p.alisTarihi || null
@@ -149,6 +150,11 @@ const CINS_RENKLERI = {
   "SSD":        { bg: "rgba(233,30,99,0.12)",   text: "#f48fb1", border: "rgba(233,30,99,0.3)" },
 };
 const CINS_LISTESI = ["İşlemci", "Ekran Kartı", "Anakart", "RAM", "SSD"];
+
+const initialStok = [
+  { id: 1, ad: "Ryzen 5 5600X",       cins: "İşlemci",    marka: "AMD",     seriNo: "AMD-2023-001", tedarikci: "Sinerji Bilgisayar", alisFiyati: 3200 },
+  { id: 2, ad: "RTX 4070 Ti",          cins: "Ekran Kartı",marka: "NVIDIA",  seriNo: "NV-TI-007",   tedarikci: "İtopya", alisFiyati: 18500 },
+];
 
 const inp = (extra = {}) => ({
   width: "100%", background: "#13162a", border: "1px solid #2a2d3e",
@@ -292,25 +298,13 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
   const YETKI_RENK = { "Yönetici": { bg:"rgba(108,99,255,.15)", color:"#a78bfa" }, "Kullanıcı": { bg:"rgba(46,213,115,.12)", color:"#2ed573" } };
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", backdropFilter:"blur(6px)",
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", backdropFilter:"blur(4px)",
       display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000 }}>
 
     {toast && <div style={{ position:"fixed", top:20, right:20, zIndex:9999, padding:"12px 20px",
       borderRadius:12, fontWeight:600, fontSize:14,
       background: toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
       color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>{toast.msg}</div>}
-
-      <div style={{ background:"#1a1d2e", borderRadius:20, padding:28, width:360, maxwidth:"90%", border:"1px solid #2a2d3e", textAlign:"center" }}>
-        <div style={{ fontSize:36, marginBottom:12 }}>⚠️</div>
-        <div style={{ fontSize:16, fontWeight:700, marginBottom:8 }}>Kullanıcıyı sil?</div>
-        <div style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>
-          <span style={{ color:"#a78bfa", fontWeight:600 }}>{silinecek.kullaniciAdi}</span> adlı kullanıcı silinecek. Bu işlem geri alınamaz.
-        </div>
-        <div style={{ display:"flex", gap:10 }}>
-          <button onClick={()=>setSilinecek(null)} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
-          <button onClick={()=>kullaniciSil(silinecek.id)} style={{ flex:1, padding:10, borderRadius:10, border:"none", background:"linear-gradient(135deg,#ff4757,#ff6b6b)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Sil</button>
-        </div>
-      </div>
 
       <div style={{ background:"#1a1d2e", borderRadius:24, width:580, maxHeight:"85vh", overflow:"auto",
         border:"1px solid #2a2d3e", boxShadow:"0 30px 80px rgba(0,0,0,.6)", display:"flex", flexDirection:"column", maxWidth:"92%" }}>
@@ -531,8 +525,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       showToast("Açıklama dışındaki tüm alanları doldurun!", "error"); 
       return; 
     }
-    
-    // UUID ve harici kolon şeması için tamamen temizlenmiş saf veri yapısı
+
     const gonderilecekVeri = {
       name: form.ad,
       type: form.cins,
@@ -687,14 +680,23 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     setForm(p => ({ ...p, cins:bulunan.cins || p.cins, marka:bulunan.marka || p.marka, tedarikci:bulunan.tedarikci || p.tedarikci }));
   };
 
-  // En yeni eklenen benzersiz UUID'li kayıt her zaman en üstte listelenir
+  // ─── TARİHE VE EKLEME REKORUNA GÖRE EN GÜNCEL SIRALAMA SİSTEMİ ───
   const filtrelenmis = [...stok]
     .filter(p=>
       p.ad.toLowerCase().includes(filtre.toLowerCase())||
       p.marka.toLowerCase().includes(filtre.toLowerCase())||
       p.cins.toLowerCase().includes(filtre.toLowerCase())
     )
-    .reverse();
+    .sort((a, b) => {
+      // 1. Kriter: Alış tarihine göre sırala (en güncel en üstte)
+      const tarihA = a.alisTarihi ? new Date(a.alisTarihi).getTime() : 0;
+      const tarihB = b.alisTarihi ? new Date(b.alisTarihi).getTime() : 0;
+      if (tarihB !== tarihA) {
+        return tarihB - tarihA;
+      }
+      // 2. Kriter: Tarihler eşitse UUID string kıyaslaması yerine eklenme sırasına göre stabil tut
+      return b.id.localeCompare(a.id);
+    });
 
   return (
     <div style={{ fontFamily:"'Outfit',sans-serif", background:"#0f1117", minHeight:"100vh", color:"#e2e8f0" }}>
@@ -728,7 +730,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <button onClick={()=>setAdminModal(true)} style={{
               background:"linear-gradient(135deg,#f59e0b,#ef4444)", color:"#fff", border:"none",
               padding:"10px 18px", borderRadius:12, fontWeight:700, fontSize:13,
-              cursor:"pointer", fontFamily:"'Outfit',sans-serif", display:"flex", alignItems:"center", gap:7,
+              cursor pointer:"pointer", fontFamily:"'Outfit',sans-serif", display:"flex", alignItems:"center", gap:7,
               boxShadow:"0 4px 166px rgba(245,158,11,.35)" }}>
               ⚙️ Yönetici Paneli
             </button>
