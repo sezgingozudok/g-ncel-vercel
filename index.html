@@ -133,7 +133,7 @@ const fromSale = (s) => ({
   cins:s.type,
   marka:s.brand,
   seriNo:s.serial_no || "",
-  aciklama:s.description || "", // VERİ AKIŞI TAMİRİ: Supabase'den gelen açıklama bağlandı
+  aciklama:s.description || "", 
   adet:1,
   fiyat:Number(s.sale_price)||0,
   alisFiyati:Number(s.purchase_price)||0,
@@ -476,7 +476,7 @@ function App() {
   const handleGiris = (k, y) => {
     const yeniOturum = { k, y };
     setOturum(yeniOturum);
-    localStorage.setItem("yuksekStok_oturum", JSON.stringify(yeniOtum));
+    localStorage.setItem("yuksekStok_oturum", JSON.stringify(yeniOturum));
   };
 
   const handleCikis = () => {
@@ -651,7 +651,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     if (!satisForm.fiyat||!satisForm.musteri) { showToast("Tüm satış bilgilerini girin!","error"); return; }
     const parca = stok.find(p=>p.id===satisModal.id);
     try {
-      // VERİ AKIŞI TAMİRİ: Ürün satılırken description (açıklama) alanı da Supabase'e gönderiliyor
       const [satis] = await dbInsert("sales", {
         product_id:parca.id,
         product_name:parca.ad,
@@ -858,7 +857,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   : filtrelenmis.map(p=>{
                     const rk = CINS_RENKLERI[p.cins]||{bg:"rgba(255,255,255,.05)",text:"#94a3b8",border:"#334155"};
                     return (
-                      <tr key={p.id} style={{ borderBottom:"1px solid #2a2d3e" }}
+                      <tr key={p.id} style={{ borderBottom:"1px solid #2a2d3e", cursor:"pointer" }}
+                        onClick={() => duzenleAc(p)}
                         onMouseEnter={e=>e.currentTarget.style.background="#1e2035"}
                         onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <td style={{ padding:"13px 16px", fontWeight:600, fontSize:14 }}>{p.ad}</td>
@@ -872,13 +872,13 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
                         <td style={{ padding:"13px 16px" }}>
                           <div style={{ display:"flex", gap:8 }}>
-                            <button onClick={()=>{setSatisModal(p);setSatisForm({fiyat:"",musteri:""})} } style={{
+                            <button onClick={(e)=>{e.stopPropagation(); setSatisModal(p); setSatisForm({fiyat:"",musteri:""})}} style={{
                               background:"rgba(46,213,115,.12)", color:"#2ed573", border:"1px solid rgba(46,213,115,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>🛒 Sat</button>
-                            <button onClick={()=>duzenleAc(p)} style={{
+                            <button onClick={(e)=>{e.stopPropagation(); duzenleAc(p)}} style={{
                               background:"rgba(58,134,255,.12)", color:"#60a5fa", border:"1px solid rgba(58,134,255,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>✏️ Düzenle</button>
-                            <button onClick={()=>parcaSil(p.id)} style={{
+                            <button onClick={(e)=>{e.stopPropagation(); parcaSil(p.id)}} style={{
                               background:"rgba(255,107,107,.12)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)",
                               padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:13, fontFamily:"'Outfit',sans-serif" }}>🗑️</button>
                           </div>
@@ -1006,7 +1006,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   ["Müşteri", satisDetayModal.musteri],
                   ["İşlemi Yapan", satisDetayModal.satanKullanici || "—"],
                   ["Satış Bedeli", `${satisDetayModal.fiyat.toLocaleString("tr-TR")} ₺`],
-                  ["Ürün Açıklaması", satisDetayModal.aciklama || "Not eklenmemiş"] // BURADA DA GÜVENLİ ŞEKİLDE GÖSTERİLİYOR
+                  ["Ürün Açıklaması", satisDetayModal.aciklama || "Not eklenmemiş"]
                 ].map(([label,value])=>(
                   <div key={label} style={{ background:"#13162a", border:"1px solid #2a2d3e", borderRadius:12, padding:"12px 14px", gridColumn: label === "Ürün Açıklaması" ? "span 2" : undefined }}>
                     <div style={{ fontSize:11, color:"#64748b", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>{label}</div>
