@@ -241,8 +241,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
   const [hata, setHata]         = useState("");
   const [toast, setToast]       = useState(null);
   const [silinecek, setSilinecek] = useState(null);
-  
-  // MODERN UYARI AKIŞI: Personel şifre modal state'leri
   const [personelSifreModal, setPersonelSifreModal] = useState(null);
   const [pYeniSifre, setPYeniSifre] = useState("");
 
@@ -280,7 +278,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
 
   const sifreDegistir = async () => {
     if (!sifreForm.eski || !sifreForm.yeni || !sifreForm.tekrar) { setHata("Şifre değiştirmek için tüm alanları doldurun!"); return; }
-    
     const tumKullanicilar = [superAdmin, ...kullanicilar];
     const bagliUrun = tumKullanicilar.find(u => u.kullaniciAdi === aktifKullanici);
     
@@ -290,13 +287,11 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
     
     try {
       const [guncel] = await dbUpdate("users", bagliUrun.id, { password:sifreForm.yeni });
-      
       if (bagliUrun.kullaniciAdi === "Yusuf") {
         setSuperAdmin(fromUser(guncel));
       } else {
         setKullanicilar(prev => prev.map(k => k.id === bagliUrun.id ? fromUser(guncel) : k));
       }
-      
       setSifreForm({ eski:"", yeni:"", tekrar:"" });
       setHata("");
       showToast("Şifreniz başarıyla güncellendi ✓");
@@ -305,7 +300,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
     }
   };
 
-  // MODERN UYARI AKIŞI: Personel şifre kaydetme işlemi
   const personelSifreKaydet = async () => {
     if (pYeniSifre.length < 3) { alert("Şifre en az 3 karakter olmalıdır!"); return; }
     try {
@@ -330,7 +324,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
       background: toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
       color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>{toast.msg}</div>}
 
-      {/* MODERN UYARI AKIŞI: Personel Şifre Değiştirme Kutusu */}
       {personelSifreModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:4000 }}>
           <div className="modal-box" style={{ width: 380 }}>
@@ -473,7 +466,6 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
                     </div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    {/* MODERN UYARI AKIŞI: Şifre değiştire basınca modern modalı tetikliyor */}
                     <button onClick={() => setPersonelSifreModal(u)} style={{ background:"rgba(245,158,11,.15)", color:"#f59e0b", border:"1px solid rgba(245,158,11,.3)", padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>🔑 Şifre Değiştir</button>
                     <select value={u.yetki} onChange={e=>kullaniciYetkiDegistir(u,e.target.value)} style={{ background:rk.bg, color:rk.color, border:`1px solid ${rk.color}55`, padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", outline:"none" }}><option>Kullanıcı</option><option>Yönetici</option></select>
                     <button onClick={()=>setSilinecek(u)} style={{
@@ -619,7 +611,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     }
   };
 
-  // MODERN UYARI AKIŞI: Gerçek stok silme tetikleyicisi
   const parcaSilOnaylandi = async (id) => {
     try { 
       await dbDelete("products", id); 
@@ -705,7 +696,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     }
   };
 
-  // MODERN UYARI AKIŞI: Gerçek satış silme tetikleyicisi
   const satisSilOnaylandi = async (id) => {
     try {
       await dbDelete("sales", id);
@@ -833,7 +823,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         background:toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
         color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)", animation:"slideIn .3s ease" }}>{toast.msg}</div>}
 
-      {/* MODERN UYARI AKIŞI: Şık Stok Silme Onay Modalı */}
+      {adminModal && <AdminPaneli onKapat={()=>setAdminModal(false)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin} aktifKullanici={kullanici}/>}
+
+      {/* ─── ENJEKSİYON DÜZELTİLDİ: SİLME ONAY MODALLARI BURADA EKRANA ENJEKTE EDİLDİ ─── */}
       {stokSilOnayModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
           <div className="modal-box" style={{ width: 360, textAlign:"center" }}>
@@ -850,7 +842,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         </div>
       )}
 
-      {/* MODERN UYARI AKIŞI: Şık Satış Geçmisi Silme Onay Modalı */}
       {satisSilOnayModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
           <div className="modal-box" style={{ width: 360, textAlign:"center" }}>
@@ -866,8 +857,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           </div>
         </div>
       )}
-
-      {adminModal && <AdminPaneli onKapat={()=>setAdminModal(false)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin} aktifKullanici={kullanici}/>}
 
       <div className="header-container">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -982,7 +971,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                             <button onClick={(e)=>{e.stopPropagation(); duzenleAc(p)}} style={{
                               background:"rgba(58,134,255,.12)", color:"#60a5fa", border:"1px solid rgba(58,134,255,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>✏️ Düzenle</button>
-                            {/* MODERN UYARI AKIŞI: Sil butonuna basınca şık modal state'ini tetikler */}
                             <button onClick={(e)=>{e.stopPropagation(); setStokSilOnayModal(p);}} style={{
                               background:"rgba(255,107,107,.12)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)",
                               padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:13, fontFamily:"'Outfit',sans-serif" }}>🗑️</button>
@@ -1027,7 +1015,6 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                             <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:13, fontWeight:600 }}>👤 {s.musteri}</span>
                           </td>
                           <td style={{ padding:"13px 16px", color:"#64748b", fontSize:13 }}>{s.satanKullanici||"—"}</td>
-                          {/* MODERN UYARI AKIŞI: Satış sil butonuna basınca şık onay modalı tetiklenir */}
                           <td style={{ padding:"13px 16px" }}><div style={{ display:"flex", gap:8 }}><button onClick={()=>satisDuzenleAc(s)} style={{ background:"rgba(58,134,255,.12)", color:"#60a5fa", border:"1px solid rgba(58,134,255,.3)", padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Düzenle</button><button onClick={()=>setSatisSilOnayModal(s)} style={{ background:"rgba(255,107,107,.12)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Sil</button></div></td>
                         </tr>
                       );
@@ -1223,7 +1210,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       {satisDuzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div className="modal-box" style={{ width: 400 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}><div style={{ fontSize:18, font-weight:700 }}>✏️ Satış Kaydı Düzenle</div><button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button></div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}><div style={{ fontSize:18, fontWeight:700 }}>✏️ Satış Kaydı Düzenle</div><button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button></div>
             {[{label:"Satış Fiyatı (₺)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(<div key={f.key} style={{ marginBottom:14 }}><label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label><input type={f.type} value={satisDuzenleForm[f.key]} onChange={e=>setSatisDuzenleForm(p=>({...p,[f.key]:e.target.value}))} style={inp()}/></div>))}
             <div style={{ display:"flex", gap:10 }}><button onClick={()=>setSatisDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button><button onClick={satisGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button></div>
           </div>
