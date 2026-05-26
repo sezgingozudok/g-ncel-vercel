@@ -241,6 +241,10 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
   const [hata, setHata]         = useState("");
   const [toast, setToast]       = useState(null);
   const [silinecek, setSilinecek] = useState(null);
+  
+  // MODERN UYARI AKIŞI: Personel şifre modal state'leri
+  const [personelSifreModal, setPersonelSifreModal] = useState(null);
+  const [pYeniSifre, setPYeniSifre] = useState("");
 
   const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
@@ -301,14 +305,15 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
     }
   };
 
-  const personelSifreDegistir = async (u) => {
-    const yeniSifre = window.prompt(`${u.kullaniciAdi} kullanıcısı için yeni bir şifre girin:`);
-    if (yeniSifre === null) return;
-    if (yeniSifre.length < 3) { alert("Şifre en az 3 karakter olmalıdır!"); return; }
+  // MODERN UYARI AKIŞI: Personel şifre kaydetme işlemi
+  const personelSifreKaydet = async () => {
+    if (pYeniSifre.length < 3) { alert("Şifre en az 3 karakter olmalıdır!"); return; }
     try {
-      const [guncel] = await dbUpdate("users", u.id, { password: yeniSifre });
-      setKullanicilar(prev => prev.map(k => k.id === u.id ? fromUser(guncel) : k));
-      showToast(`${u.kullaniciAdi} şifresi güncellendi ✓`);
+      const [guncel] = await dbUpdate("users", personelSifreModal.id, { password: pYeniSifre });
+      setKullanicilar(prev => prev.map(k => k.id === personelSifreModal.id ? fromUser(guncel) : k));
+      setPersonelSifreModal(null);
+      setPYeniSifre("");
+      showToast(`${personelSifreModal.kullaniciAdi} şifresi güncellendi ✓`);
     } catch {
       showToast("Şifre güncellenemedi!", "error");
     }
@@ -324,6 +329,23 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
       borderRadius:12, fontWeight:600, fontSize:14,
       background: toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
       color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)" }}>{toast.msg}</div>}
+
+      {/* MODERN UYARI AKIŞI: Personel Şifre Değiştirme Kutusu */}
+      {personelSifreModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:4000 }}>
+          <div className="modal-box" style={{ width: 380 }}>
+            <div style={{ fontSize:16, fontWeight:700, marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>🔑 Şifre Değiştir</div>
+            <div style={{ fontSize:13, color:"#64748b", marginBottom:18 }}><span style={{ color:"#f59e0b", fontWeight:600 }}>{personelSifreModal.kullaniciAdi}</span> personeli için yeni şifre tanımlayın.</div>
+            <div style={{ marginBottom:20 }}>
+              <input type="text" value={pYeniSifre} onChange={e=>setPYeniSifre(e.target.value)} placeholder="Yeni şifreyi yazın" style={inp()}/>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>{setPersonelSifreModal(null); setPYeniSifre("");}} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
+              <button onClick={personelSifreKaydet} style={{ flex:1, padding:10, borderRadius:10, border:"none", background:"linear-gradient(135deg,#f59e0b,#ef4444)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Kaydet</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {silinecek && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
@@ -451,7 +473,8 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
                     </div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <button onClick={() => personelSifreDegistir(u)} style={{ background:"rgba(245,158,11,.15)", color:"#f59e0b", border:"1px solid rgba(245,158,11,.3)", padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>🔑 Şifre Değiştir</button>
+                    {/* MODERN UYARI AKIŞI: Şifre değiştire basınca modern modalı tetikliyor */}
+                    <button onClick={() => setPersonelSifreModal(u)} style={{ background:"rgba(245,158,11,.15)", color:"#f59e0b", border:"1px solid rgba(245,158,11,.3)", padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>🔑 Şifre Değiştir</button>
                     <select value={u.yetki} onChange={e=>kullaniciYetkiDegistir(u,e.target.value)} style={{ background:rk.bg, color:rk.color, border:`1px solid ${rk.color}55`, padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", outline:"none" }}><option>Kullanıcı</option><option>Yönetici</option></select>
                     <button onClick={()=>setSilinecek(u)} style={{
                       background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.25)",
@@ -524,6 +547,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const [adminModal, setAdminModal]   = useState(false);
   const [aktifSekme, setAktifSekme]   = useState("stok");
 
+  // MODERN UYARI AKIŞI: Şık onay kutusu state'leri
+  const [stokSilOnayModal, setStokSilOnayModal] = useState(null);
+  const [satisSilOnayModal, setSatisSilOnayModal] = useState(null);
+
   const getBugununTarihi = () => {
     const d = new Date();
     const ay = String(d.getMonth() + 1).padStart(2, '0');
@@ -592,16 +619,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     }
   };
 
-  // ─── TAMİR EDİLEN YER: Ürün silinirken artık tak diye silmek yerine onay kutusu çıkartıyor ───
-  const parcaSil = async (id) => { 
-    const bulunanParca = stok.find(p => p.id === id);
-    const parcaAdi = bulunanParca ? bulunanParca.ad : "bu ürünü";
-    
-    if (!window.confirm(`"${parcaAdi}" adlı stoğu tamamen silmek istediğinize emin misiniz?`)) return;
-    
+  // MODERN UYARI AKIŞI: Gerçek stok silme tetikleyicisi
+  const parcaSilOnaylandi = async (id) => {
     try { 
       await dbDelete("products", id); 
       setStok(prev=>prev.filter(p=>p.id!==id)); 
+      setStokSilOnayModal(null);
       showToast("Parça başarıyla silindi","info"); 
     } catch {
       showToast("Parça silinemedi!", "error");
@@ -682,11 +705,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     }
   };
 
-  const satisSil = async (satis) => {
-    if (!window.confirm(`${satis.parcaAd} ürününe ait bu satış kaydını silmek istediğinize emin misiniz?`)) return;
+  // MODERN UYARI AKIŞI: Gerçek satış silme tetikleyicisi
+  const satisSilOnaylandi = async (id) => {
     try {
-      await dbDelete("sales", satis.id);
-      setSatisGecmisi(prev => prev.filter(s => s.id !== satis.id));
+      await dbDelete("sales", id);
+      setSatisGecmisi(prev => prev.filter(s => s.id !== id));
+      setSatisSilOnayModal(null);
       showToast("Satış kaydı silindi", "info");
     } catch (err) {
       showToast("Satış kaydı silinemedi!", "error");
@@ -809,6 +833,40 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         background:toast.type==="error"?"#ff4757":toast.type==="info"?"#3a86ff":"#2ed573",
         color:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.4)", animation:"slideIn .3s ease" }}>{toast.msg}</div>}
 
+      {/* MODERN UYARI AKIŞI: Şık Stok Silme Onay Modalı */}
+      {stokSilOnayModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
+          <div className="modal-box" style={{ width: 360, textAlign:"center" }}>
+            <div style={{ fontSize:36, marginBottom:12 }}>⚠️</div>
+            <div style={{ fontSize:16, fontWeight:700, marginBottom:8 }}>Ürünü Sil?</div>
+            <div style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>
+              <span style={{ color:"#ff6b6b", fontWeight:600 }}>{stokSilOnayModal.ad}</span> adlı stoğu tamamen silmek istediğinize emin misiniz?
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setStokSilOnayModal(null)} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
+              <button onClick={()=>parcaSilOnaylandi(stokSilOnayModal.id)} style={{ flex:1, padding:10, borderRadius:10, border:"none", background:"linear-gradient(135deg,#ff4757,#ff6b6b)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Sil</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODERN UYARI AKIŞI: Şık Satış Geçmisi Silme Onay Modalı */}
+      {satisSilOnayModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
+          <div className="modal-box" style={{ width: 360, textAlign:"center" }}>
+            <div style={{ fontSize:36, marginBottom:12 }}>⚠️</div>
+            <div style={{ fontSize:16, fontWeight:700, marginBottom:8 }}>Satış Kaydını Sil?</div>
+            <div style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>
+              <span style={{ color:"#ff6b6b", fontWeight:600 }}>{satisSilOnayModal.parcaAd}</span> ürününe ait bu satış kaydını silmek istediğinize emin misiniz?
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setSatisSilOnayModal(null)} style={{ flex:1, padding:10, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>İptal</button>
+              <button onClick={()=>satisSilOnaylandi(satisSilOnayModal.id)} style={{ flex:1, padding:10, borderRadius:10, border:"none", background:"linear-gradient(135deg,#ff4757,#ff6b6b)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Sil</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {adminModal && <AdminPaneli onKapat={()=>setAdminModal(false)} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin} aktifKullanici={kullanici}/>}
 
       <div className="header-container">
@@ -924,7 +982,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                             <button onClick={(e)=>{e.stopPropagation(); duzenleAc(p)}} style={{
                               background:"rgba(58,134,255,.12)", color:"#60a5fa", border:"1px solid rgba(58,134,255,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>✏️ Düzenle</button>
-                            <button onClick={(e)=>{e.stopPropagation(); parcaSil(p.id)}} style={{
+                            {/* MODERN UYARI AKIŞI: Sil butonuna basınca şık modal state'ini tetikler */}
+                            <button onClick={(e)=>{e.stopPropagation(); setStokSilOnayModal(p);}} style={{
                               background:"rgba(255,107,107,.12)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)",
                               padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:13, fontFamily:"'Outfit',sans-serif" }}>🗑️</button>
                           </div>
@@ -968,7 +1027,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                             <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:13, fontWeight:600 }}>👤 {s.musteri}</span>
                           </td>
                           <td style={{ padding:"13px 16px", color:"#64748b", fontSize:13 }}>{s.satanKullanici||"—"}</td>
-                          <td style={{ padding:"13px 16px" }}><div style={{ display:"flex", gap:8 }}><button onClick={()=>satisDuzenleAc(s)} style={{ background:"rgba(58,134,255,.12)", color:"#60a5fa", border:"1px solid rgba(58,134,255,.3)", padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Düzenle</button><button onClick={()=>satisSil(s)} style={{ background:"rgba(255,107,107,.12)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Sil</button></div></td>
+                          {/* MODERN UYARI AKIŞI: Satış sil butonuna basınca şık onay modalı tetiklenir */}
+                          <td style={{ padding:"13px 16px" }}><div style={{ display:"flex", gap:8 }}><button onClick={()=>satisDuzenleAc(s)} style={{ background:"rgba(58,134,255,.12)", color:"#60a5fa", border:"1px solid rgba(58,134,255,.3)", padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Düzenle</button><button onClick={()=>setSatisSilOnayModal(s)} style={{ background:"rgba(255,107,107,.12)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Sil</button></div></td>
                         </tr>
                       );
                     })}
@@ -1163,7 +1223,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       {satisDuzenleModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div className="modal-box" style={{ width: 400 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}><div style={{ fontSize:18, fontWeight:700 }}>✏️ Satış Kaydı Düzenle</div><button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button></div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}><div style={{ fontSize:18, font-weight:700 }}>✏️ Satış Kaydı Düzenle</div><button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button></div>
             {[{label:"Satış Fiyatı (₺)",key:"fiyat",type:"number"},{label:"Müşteri Adı",key:"musteri",type:"text"}].map(f=>(<div key={f.key} style={{ marginBottom:14 }}><label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label><input type={f.type} value={satisDuzenleForm[f.key]} onChange={e=>setSatisDuzenleForm(p=>({...p,[f.key]:e.target.value}))} style={inp()}/></div>))}
             <div style={{ display:"flex", gap:10 }}><button onClick={()=>setSatisDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button><button onClick={satisGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button></div>
           </div>
