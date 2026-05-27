@@ -20,7 +20,7 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 16px;
-    <!-- } -->
+    }
     .header-actions {
       display: flex; 
       align-items: center; 
@@ -597,7 +597,9 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
                         </div>
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                        <button onClick={() => setPersonelSifreModal(u)} style={{ background:"rgba(245,158,11,.15)", color:"#f59e0b", border:"1px solid rgba(245,158,11,.3)", padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>🔑 Şifre Değiştir</button>
+                        {isSuperAdmin(aktifKullanici) && !isSezgin && (
+                          <button onClick={() => setPersonelSifreModal(u)} style={{ background:"rgba(245,158,11,.15)", color:"#f59e0b", border:"1px solid rgba(245,158,11,.3)", padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>🔑 Şifre Değiştir</button>
+                        )}
                         {isSezgin ? (
                           <>
                             <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:600 }}>Süper Admin</span>
@@ -1426,8 +1428,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             {key:"stok",label:"📋 Stok Listesi"}, 
             ...(yoneticiMi ? [
               {key:"gecmis",label:"📊 Satış Geçmişi"},
-              {key:"gelir",label:"💰 Gelir-Gider"},
-              ...(isSuperAdmin(kullanici) ? [{key:"cop",label:"🗑️ Çöp Kutusu"}] : [])
+              ...(isSuperAdmin(kullanici) ? [
+                {key:"gelir",label:"💰 Gelir-Gider"},
+                {key:"cop",label:"🗑️ Çöp Kutusu"}
+              ] : [])
             ] : [])
           ].map(s=>(
             <button key={s.key} onClick={()=>setAktifSekme(s.key)} style={{
@@ -1689,7 +1693,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           </div>
           </>
         )}
-        {aktifSekme==="gelir" && (
+        {aktifSekme==="gelir" && isSuperAdmin(kullanici) && (
           <div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:16, marginBottom:16 }}>
               {[
