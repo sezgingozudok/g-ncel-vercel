@@ -78,6 +78,7 @@
 const { useEffect, useState } = React;
 
 const SUPER_ADMIN = { kullaniciAdi: "Yusuf", sifre: "12345", yetki: "Yönetici" };
+const isSuperAdmin = (username) => username === "Yusuf" || username === "Sezgin";
 const SUPABASE_URL = "https://mdhtzirpkjejlrbwwwkw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cELISZREV0oXwwFZOtcyxg_m094EZW1";
 const SUPABASE_REST = `${SUPABASE_URL}/rest/v1`;
@@ -100,9 +101,22 @@ const dbSelect = (table, query = "") => dbRequest(`${table}${query}`);
 const dbInsert = (table, data) => dbRequest(table, { method:"POST", headers:{ Prefer:"return=representation" }, body:JSON.stringify(data) });
 const dbUpdate = (table, id, data) => dbRequest(`${table}?id=eq.${id}`, { method:"PATCH", headers:{ Prefer:"return=representation" }, body:JSON.stringify(data) });
 const dbDelete = (table, id) => dbRequest(`${table}?id=eq.${id}`, { method:"DELETE" });
+const fromUser = (u) => {
+  const roleParts = (u.role || "").split(" | Tel: ");
+  return { 
+    id: u.id, 
+    kullaniciAdi: u.username, 
+    sifre: u.password, 
+    yetki: roleParts[0] || "Kullanıcı",
+    telefon: roleParts[1] || ""
+  };
+};
 
-const fromUser = (u) => ({ id:u.id, kullaniciAdi:u.username, sifre:u.password, yetki:u.role });
-const toUser = (u) => ({ username:u.kullaniciAdi, password:u.sifre, role:u.yetki });
+const toUser = (u) => ({ 
+  username: u.kullaniciAdi, 
+  password: u.sifre, 
+  role: u.telefon ? `${u.yetki} | Tel: ${u.telefon}` : u.yetki 
+});;
 
 // ─── SUPABASE GERÇEK TABLO YAPISINA GÖRE TAM UYUMLU HARİTALAMA ───
 const fromProduct = (p) => ({
@@ -115,7 +129,8 @@ const fromProduct = (p) => ({
   gorsel: p.image_url || "",
   alisFiyati: Number(p.purchase_price) || 0,
   tedarikci: p.supplier || "",
-  alisTarihi: p.purchase_date || ""
+  alisTarihi: p.purchase_date || "",
+  createdAt: p.created_at ? new Date(p.created_at).getTime() : 0
 });
 
 const toProduct = (p) => ({
@@ -178,15 +193,69 @@ const parseKasaSpecs = (desc) => {
   return specs;
 };
 
+const CINS_IKONLARI = {
+  "İşlemci":    "🧠",
+  "Ekran Kartı":"🎮",
+  "Anakart":    "🔌",
+  "RAM":        "💾",
+  "SSD":        "💽",
+  "Kasa":       "🖥️"
+};
+
 const getTeslimAlan = (s) => {
-  if (!s || !s.aciklama) return s ? s.musteri : "";
+  if (!s || !s.aciklama) return s ? parseMusteri(s.musteri).ad : "";
   const match = s.aciklama.match(/Teslim Alan: (.*)/);
-  return match ? match[1] : s.musteri;
+  return match ? match[1] : parseMusteri(s.musteri).ad;
 };
 
 const cleanDescription = (desc) => {
   if (!desc) return "Not eklenmemiş";
-  return desc.replace(/\nTeslim Alan: .*/, "");
+  return desc
+    .replace(/\nTeslim Alan: .*/g, "")
+    .replace(/\nDüzenleyen: .*/g, "")
+    .replace(/\nSilindi: .*/g, "");
+};
+
+const cleanEditLog = (desc) => {
+  if (!desc) return "";
+  return desc
+    .replace(/\nDüzenleyen: .*/g, "")
+    .replace(/\nSilindi: .*/g, "");
+};
+
+const getEditorInfo = (desc) => {
+  if (!desc) return "";
+  const match = desc.match(/\nDüzenleyen: (.*)/);
+  return match ? match[1] : "";
+};
+
+const getSiliciInfo = (desc) => {
+  if (!desc) return "";
+  const match = desc.match(/\nSilindi: (.*)/);
+  return match ? match[1] : "";
+};
+
+const parseMusteri = (m) => {
+  if (!m) return { ad: "", tel: "" };
+  const parts = m.split(" | Tel: ");
+  return { ad: parts[0] || "", tel: parts[1] || "" };
+};
+
+const parseSatanKullanici = (s) => {
+  if (!s) return { ad: "—", tel: "" };
+  const parts = s.split(" | Tel: ");
+  return { ad: parts[0] || "", tel: parts[1] || "" };
+};
+
+const parseTedarikci = (t) => {
+  if (!t) return { ad: "", tel: "" };
+  const parts = t.split(" | Tel: ");
+  return { ad: parts[0] || "", tel: parts[1] || "" };
+};
+
+const getGorseller = (g) => {
+  if (!g) return [];
+  return g.split("|||").filter(Boolean);
 };
 
 const inp = (extra = {}) => ({
@@ -228,7 +297,7 @@ function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
             justifyContent:"center", fontSize:30, boxShadow:"0 8px 30px rgba(108,99,255,.4)" }}>🖥️</div>
           <div style={{ fontSize:24, fontWeight:800, background:"linear-gradient(135deg,#a78bfa,#60a5fa)",
             WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>ZamazingoTr</div>
-          <div style={{ fontSize:12, color:"#64748b", marginTop:4, letterSpacing:1.5 }}>STOK TAKİP ZAMAZİNGOSU</div>
+          <div style={{ fontSize:12, color:"#64748b", marginTop:4, letterSpacing:1.5 }}>STOK TAKİP SİSTEMİ</div>
         </div>
         <div style={{ fontSize:13, color:"#94a3b8", marginBottom:24, textAlign:"center" }}>Devam etmek için giriş yapın</div>
 
@@ -274,7 +343,7 @@ function LoginEkrani({ onGiris, kullanicilar, superAdmin }) {
 }
 
 function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSuperAdmin, aktifKullanici }) {
-  const [yeniForm, setYeniForm] = useState({ kullaniciAdi:"", sifre:"", yetki:"Kullanıcı" });
+  const [yeniForm, setYeniForm] = useState({ kullaniciAdi:"", sifre:"", yetki:"Kullanıcı", telefon:"" });
   const [sifreForm, setSifreForm] = useState({ eski:"", yeni:"", tekrar:"" });
   const [hata, setHata]         = useState("");
   const [toast, setToast]       = useState(null);
@@ -291,7 +360,7 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
     try {
       const [eklenen] = await dbInsert("users", toUser(yeniForm));
       setKullanicilar(prev => [...prev, fromUser(eklenen)]);
-      setYeniForm({ kullaniciAdi:"", sifre:"", yetki:"Kullanıcı" });
+      setYeniForm({ kullaniciAdi:"", sifre:"", yetki:"Kullanıcı", telefon:"" });
       setHata("");
       showToast("Kullanıcı eklendi ✓");
     } catch {
@@ -308,7 +377,8 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
 
   const kullaniciYetkiDegistir = async (u, yeniYetki) => {
     try {
-      const [guncel] = await dbUpdate("users", u.id, { role:yeniYetki });
+      const compUser = { ...u, yetki: yeniYetki };
+      const [guncel] = await dbUpdate("users", u.id, toUser(compUser));
       setKullanicilar(prev => prev.map(k => k.id === u.id ? fromUser(guncel) : k));
       showToast("Kullanıcı yetkisi güncellendi ✓");
     } catch { showToast("Kullanıcı güncellenemedi!", "error"); }
@@ -325,7 +395,11 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
     if (sifreForm.yeni !== sifreForm.tekrar) { setHata("Yeni şifreler eşleşmiyor!"); return; }
     
     try {
-      const [guncel] = await dbUpdate("users", bagliUrun.id, { password:sifreForm.yeni });
+      const compUser = { ...bagliUrun };
+      const [guncel] = await dbUpdate("users", bagliUrun.id, { 
+        password: sifreForm.yeni,
+        role: toUser(compUser).role
+      });
       
       if (bagliUrun.kullaniciAdi === "Yusuf") {
         setSuperAdmin(fromUser(guncel));
@@ -344,7 +418,11 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
   const personelSifreKaydet = async () => {
     if (pYeniSifre.length < 3) { alert("Şifre en az 3 karakter olmalıdır!"); return; }
     try {
-      const [guncel] = await dbUpdate("users", personelSifreModal.id, { password: pYeniSifre });
+      const compUser = { ...personelSifreModal };
+      const [guncel] = await dbUpdate("users", personelSifreModal.id, { 
+        password: pYeniSifre,
+        role: toUser(compUser).role
+      });
       setKullanicilar(prev => prev.map(k => k.id === personelSifreModal.id ? fromUser(guncel) : k));
       setPersonelSifreModal(null);
       setPYeniSifre("");
@@ -357,8 +435,7 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
   const YETKI_RENK = { "Yönetici": { bg:"rgba(108,99,255,.15)", color:"#a78bfa" }, "Kullanıcı": { bg:"rgba(46,213,115,.12)", color:"#2ed573" } };
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", backdropFilter:"blur(4px)",
-      display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000 }}>
+    <div style={{ display:"block", width:"100%" }}>
 
     {toast && <div style={{ position:"fixed", top:20, right:20, zIndex:9999, padding:"12px 20px",
       borderRadius:12, fontWeight:600, fontSize:14,
@@ -397,126 +474,150 @@ function AdminPaneli({ onKapat, kullanicilar, setKullanicilar, superAdmin, setSu
         </div>
       )}
 
-      <div style={{ background:"#1a1d2e", borderRadius:24, width:580, maxHeight:"85vh", overflow:"auto",
-        border:"1px solid #2a2d3e", boxShadow:"0 30px 80px rgba(0,0,0,.6)", display:"flex", flexDirection:"column", maxWidth:"92%" }}>
+      <div style={{ background:"#1a1d2e", borderRadius:24, width:"100%", border:"1px solid #2a2d3e", display:"flex", flexDirection:"column", marginBottom: 24 }}>
 
         <div style={{ padding:"22px 28px", borderBottom:"1px solid #2a2d3e", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#1a1d2e", zIndex:1 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={{ width:40, height:40, borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#ef4444)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>⚙️</div>
             <div>
               <div style={{ fontSize:17, fontWeight:800 }}>Yönetici Paneli</div>
-              <div style={{ fontSize:11, color:"#64748b", letterSpacing:.8 }}>KULLANICI YÖNETİMİ</div>
+              <div style={{ fontSize:11, color:"#64748b", letterSpacing:.8 }}>KULLANICI VE SİSTEM YÖNETİMİ</div>
             </div>
           </div>
-          <button onClick={onKapat} style={{ background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", width:34, height:34, borderRadius:10, cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+          <button onClick={onKapat} style={{ background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", width:34, height:34, borderRadius:10, cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }} title="Kapat (Stok Listesine Dön)">✕</button>
         </div>
 
         <div style={{ padding:28 }}>
-          <div style={{ background:"#13162a", borderRadius:16, padding:20, marginBottom:24, border:"1px solid #2a2d3e" }}>
-            <div style={{ fontSize:14, fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ background:"rgba(46,213,115,.15)", color:"#2ed573", padding:"3px 10px", borderRadius:20, fontSize:12 }}>＋</span> Yeni Kullanıcı Ekle
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-              <div>
-                <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Kullanıcı Adı</label>
-                <input value={yeniForm.kullaniciAdi} onChange={e=>setYeniForm(p=>({...p,kullaniciAdi:e.target.value}))}
-                  placeholder="Örn: Ahmet" style={inp()} onFocus={()=>setHata("")}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Şifre</label>
-                <input value={yeniForm.sifre} onChange={e=>setYeniForm(p=>({...p,sifre:e.target.value}))}
-                  placeholder="Şifre belirleyin" style={inp()} onFocus={()=>setHata("")}/>
-              </div>
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Yetki Türü</label>
-              <select value={yeniForm.yetki} onChange={e=>setYeniForm(p=>({...p,yetki:e.target.value}))} style={inp()}>
-                <option>Kullanıcı</option>
-                <option>Yönetici</option>
-              </select>
-            </div>
-            {hata && <div style={{ background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.3)", borderRadius:8, padding:"8px 12px", marginBottom:12, fontSize:12, color:"#ff6b6b" }}>⚠️ {hata}</div>}
-            <button onClick={kullaniciEkle} style={{
-              width:"100%", padding:11, borderRadius:10, border:"none",
-              background:"linear-gradient(135deg,#2ed573,#00b894)", color:"#fff",
-              fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
-              ＋ Kullanıcıyı Ekle
-            </button>
-          </div>
-
-          <div style={{ background:"#13162a", borderRadius:16, padding:20, marginBottom:24, border:"1px solid rgba(108,99,255,.28)" }}>
-            <div style={{ fontSize:14, fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"3px 10px", borderRadius:20, fontSize:12 }}>🔑</span> Kendi Şifreni Değiştir
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:14 }}>
-              <div>
-                <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Mevcut Şifre</label>
-                <input type="password" value={sifreForm.eski} onChange={e=>{setSifreForm(p=>({...p,eski:e.target.value}));setHata("");}} placeholder="Mevcut" style={inp()}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Yeni Şifre</label>
-                <input type="password" value={sifreForm.yeni} onChange={e=>{setSifreForm(p=>({...p,yeni:e.target.value}));setHata("");}} placeholder="Yeni" style={inp()}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Tekrar</label>
-                <input type="password" value={sifreForm.tekrar} onChange={e=>{setSifreForm(p=>({...p,tekrar:e.target.value}));setHata("");}} placeholder="Tekrar" style={inp()}/>
-              </div>
-            </div>
-            <button onClick={sifreDegistir} style={{
-              width:"100%", padding:11, borderRadius:10, border:"none",
-              background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff",
-              fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
-              ✓ Şifreyi Güncelle
-            </button>
-          </div>
-
-          <div style={{ fontSize:13, fontWeight:700, color:"#64748b", marginBottom:14, textTransform:"uppercase", letterSpacing:1 }}>
-            Mevcut Kullanıcılar ({1 + kullanicilar.length})
-          </div>
-
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            <div style={{ background:"#13162a", borderRadius:14, padding:"14px 18px", border:"1px solid rgba(108,99,255,.3)",
-              display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#6c63ff,#3a86ff)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👑</div>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:14 }}>{superAdmin.kullaniciAdi}</div>
-                  <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Şifre: {"•".repeat(superAdmin.sifre.length)}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 28 }}>
+            <div>
+              <div style={{ background:"#13162a", borderRadius:16, padding:20, marginBottom:24, border:"1px solid #2a2d3e" }}>
+                <div style={{ fontSize:14, fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ background:"rgba(46,213,115,.15)", color:"#2ed573", padding:"3px 10px", borderRadius:20, fontSize:12 }}>＋</span> Yeni Kullanıcı Ekle
                 </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Kullanıcı Adı</label>
+                    <input value={yeniForm.kullaniciAdi} onChange={e=>setYeniForm(p=>({...p,kullaniciAdi:e.target.value}))}
+                      placeholder="Örn: Ahmet" style={inp()} onFocus={()=>setHata("")}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Şifre</label>
+                    <input value={yeniForm.sifre} onChange={e=>setYeniForm(p=>({...p,sifre:e.target.value}))}
+                      placeholder="Şifre belirleyin" style={inp()} onFocus={()=>setHata("")}/>
+                  </div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Yetki Türü</label>
+                    <select value={yeniForm.yetki} onChange={e=>setYeniForm(p=>({...p,yetki:e.target.value}))} style={inp()}>
+                      <option>Kullanıcı</option>
+                      <option>Yönetici</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Telefon Numarası</label>
+                    <input value={yeniForm.telefon} onChange={e=>setYeniForm(p=>({...p,telefon:e.target.value}))}
+                      placeholder="Örn: 0555 123 4567" style={inp()}/>
+                  </div>
+                </div>
+                {hata && <div style={{ background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.3)", borderRadius:8, padding:"8px 12px", marginBottom:12, fontSize:12, color:"#ff6b6b" }}>⚠️ {hata}</div>}
+                <button onClick={kullaniciEkle} style={{
+                  width:"100%", padding:11, borderRadius:10, border:"none",
+                  background:"linear-gradient(135deg,#2ed573,#00b894)", color:"#fff",
+                  fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
+                  ＋ Kullanıcıyı Ekle
+                </button>
               </div>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:600 }}>Süper Admin</span>
-                <span style={{ fontSize:11, color:"#334155", background:"#1a1d2e", padding:"4px 10px", borderRadius:8, border:"1px solid #2a2d3e" }}>🔒 Silinemez</span>
+
+              <div style={{ background:"#13162a", borderRadius:16, padding:20, border:"1px solid rgba(108,99,255,.28)" }}>
+                <div style={{ fontSize:14, fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"3px 10px", borderRadius:20, fontSize:12 }}>🔑</span> Kendi Şifreni Değiştir
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:14 }}>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Mevcut Şifre</label>
+                    <input type="password" value={sifreForm.eski} onChange={e=>{setSifreForm(p=>({...p,eski:e.target.value}));setHata("");}} placeholder="Mevcut" style={inp()}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Yeni Şifre</label>
+                    <input type="password" value={sifreForm.yeni} onChange={e=>{setSifreForm(p=>({...p,yeni:e.target.value}));setHata("");}} placeholder="Yeni" style={inp()}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#64748b", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Tekrar</label>
+                    <input type="password" value={sifreForm.tekrar} onChange={e=>{setSifreForm(p=>({...p,tekrar:e.target.value}));setHata("");}} placeholder="Tekrar" style={inp()}/>
+                  </div>
+                </div>
+                <button onClick={sifreDegistir} style={{
+                  width:"100%", padding:11, borderRadius:10, border:"none",
+                  background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff",
+                  fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
+                  ✓ Şifreyi Güncelle
+                </button>
               </div>
             </div>
 
-            {kullanicilar.length === 0 && (
-              <div style={{ textAlign:"center", padding:"24px", color:"#334155", fontSize:13 }}>Henüz ek kullanıcı eklenmedi</div>
-            )}
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color:"#64748b", marginBottom:14, textTransform:"uppercase", letterSpacing:1 }}>
+                Mevcut Kullanıcılar ({1 + kullanicilar.length})
+              </div>
 
-            {kullanicilar.map(u => {
-              const rk = YETKI_RENK[u.yetki] || YETKI_RENK["Kullanıcı"];
-              return (
-                <div key={u.id} style={{ background:"#13162a", borderRadius:14, padding:"14px 18px", border:"1px solid #2a2d3e",
-                  display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                <div style={{ background:"#13162a", borderRadius:14, padding:"14px 18px", border:"1px solid rgba(108,99,255,.3)",
+                  display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                    <div style={{ width:36, height:36, borderRadius:10, background:"rgba(58,134,255,.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👤</div>
+                    <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#6c63ff,#3a86ff)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👑</div>
                     <div>
-                      <div style={{ fontWeight:700, fontSize:14 }}>{u.kullaniciAdi}</div>
-                      <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Şifre: {"•".repeat(u.sifre.length)}</div>
+                      <div style={{ fontWeight:700, fontSize:14 }}>{superAdmin.kullaniciAdi} {superAdmin.telefon && <span style={{ color:"#a78bfa", fontSize:12, fontWeight:500 }}>({superAdmin.telefon})</span>}</div>
+                      <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Şifre: {"•".repeat(superAdmin.sifre.length)}</div>
                     </div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <button onClick={() => setPersonelSifreModal(u)} style={{ background:"rgba(245,158,11,.15)", color:"#f59e0b", border:"1px solid rgba(245,158,11,.3)", padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>🔑 Şifre Değiştir</button>
-                    <select value={u.yetki} onChange={e=>kullaniciYetkiDegistir(u,e.target.value)} style={{ background:rk.bg, color:rk.color, border:`1px solid ${rk.color}55`, padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", outline:"none" }}><option>Kullanıcı</option><option>Yönetici</option></select>
-                    <button onClick={()=>setSilinecek(u)} style={{
-                      background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.25)",
-                      padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"'Outfit',sans-serif",
-                      fontSize:12, fontWeight:600 }}>🗑️ Sil</button>
+                    <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:600 }}>Süper Admin</span>
+                    <span style={{ fontSize:11, color:"#334155", background:"#1a1d2e", padding:"4px 10px", borderRadius:8, border:"1px solid #2a2d3e" }}>🔒 Silinemez</span>
                   </div>
                 </div>
-              );
-            })}
+
+                {kullanicilar.length === 0 && (
+                  <div style={{ textAlign:"center", padding:"24px", color:"#334155", fontSize:13 }}>Henüz ek kullanıcı eklenmedi</div>
+                )}
+
+                {kullanicilar.map(u => {
+                  const rk = YETKI_RENK[u.yetki] || YETKI_RENK["Kullanıcı"];
+                  const isSezgin = u.kullaniciAdi === "Sezgin";
+                  return (
+                    <div key={u.id} style={{ background:"#13162a", borderRadius:14, padding:"14px 18px", border: isSezgin ? "1px solid rgba(108,99,255,.3)" : "1px solid #2a2d3e",
+                      display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                        <div style={{ width:36, height:36, borderRadius:10, background: isSezgin ? "linear-gradient(135deg,#6c63ff,#3a86ff)" : "rgba(58,134,255,.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>
+                          {isSezgin ? "👑" : "👤"}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight:700, fontSize:14 }}>{u.kullaniciAdi} {u.telefon && <span style={{ color: isSezgin ? "#a78bfa" : "#60a5fa", fontSize:12, fontWeight:500 }}>({u.telefon})</span>}</div>
+                          <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Şifre: {"•".repeat(u.sifre.length)}</div>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <button onClick={() => setPersonelSifreModal(u)} style={{ background:"rgba(245,158,11,.15)", color:"#f59e0b", border:"1px solid rgba(245,158,11,.3)", padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>🔑 Şifre Değiştir</button>
+                        {isSezgin ? (
+                          <>
+                            <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:600 }}>Süper Admin</span>
+                            <span style={{ fontSize:11, color:"#334155", background:"#1a1d2e", padding:"4px 10px", borderRadius:8, border:"1px solid #2a2d3e" }}>🔒 Silinemez</span>
+                          </>
+                        ) : (
+                          <>
+                            <select value={u.yetki} onChange={e=>kullaniciYetkiDegistir(u,e.target.value)} style={{ background:rk.bg, color:rk.color, border:`1px solid ${rk.color}55`, padding:"5px 10px", borderRadius:12, fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif", outline:"none" }}><option>Kullanıcı</option><option>Yönetici</option></select>
+                            <button onClick={()=>setSilinecek(u)} style={{
+                              background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.25)",
+                              padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"'Outfit',sans-serif",
+                              fontSize:12, fontWeight:600 }}>🗑️ Sil</button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -528,6 +629,15 @@ function App() {
   const [oturum, setOturum]         = useState(null);
   const [kullanicilar, setKullanicilar] = useState([]);
   const [superAdmin, setSuperAdmin] = useState(SUPER_ADMIN);
+  const [isAdminPage, setIsAdminPage] = useState(window.location.search.includes("page=admin"));
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      setIsAdminPage(window.location.search.includes("page=admin"));
+    };
+    window.addEventListener("popstate", handleUrlChange);
+    return () => window.removeEventListener("popstate", handleUrlChange);
+  }, []);
 
   useEffect(() => {
     const kayitliOturum = localStorage.getItem("yuksekStok_oturum");
@@ -554,6 +664,30 @@ function App() {
     return () => { aktif = false; };
   }, []);
 
+  useEffect(() => {
+    if (!oturum || oturum.k === "Yusuf" || !isAdminPage) return;
+    const interval = setInterval(async () => {
+      try {
+        const rows = await dbSelect("users", `?username=eq.${oturum.k}`);
+        if (rows && rows.length > 0) {
+          const u = fromUser(rows[0]);
+          if (u.yetki !== oturum.y) {
+            if (u.yetki !== "Yönetici") {
+              localStorage.setItem("yuksekStok_oturum", JSON.stringify({ k: oturum.k, y: u.yetki }));
+              window.location.href = window.location.href.split(/[?#]/)[0];
+            } else {
+              setOturum({ k: oturum.k, y: u.yetki });
+            }
+          }
+        } else {
+          handleCikis();
+          window.location.href = window.location.href.split(/[?#]/)[0];
+        }
+      } catch (e) {}
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [oturum, isAdminPage]);
+
   const handleGiris = (k, y) => {
     const yeniOturum = { k, y };
     setOturum(yeniOturum);
@@ -566,6 +700,31 @@ function App() {
   };
 
   if (!oturum) return <LoginEkrani onGiris={handleGiris} kullanicilar={kullanicilar} superAdmin={superAdmin}/>;
+
+  if (isAdminPage) {
+    if (oturum.y !== "Yönetici") {
+      window.location.href = window.location.href.split(/[?#]/)[0];
+      return null;
+    }
+    return (
+      <div style={{ fontFamily:"'Outfit',sans-serif", background:"#0f1117", minHeight:"100vh", color:"#e2e8f0", padding:"24px 28px" }}>
+        <AdminPaneli 
+          onKapat={() => {
+            try {
+              window.close();
+            } catch (e) {}
+            window.location.href = window.location.href.split(/[?#]/)[0];
+          }} 
+          kullanicilar={kullanicilar} 
+          setKullanicilar={setKullanicilar} 
+          superAdmin={superAdmin} 
+          setSuperAdmin={setSuperAdmin} 
+          aktifKullanici={oturum.k}
+        />
+      </div>
+    );
+  }
+
   return <StokTakipIc kullanici={oturum.k} yetki={oturum.y}
     onCikis={handleCikis} kullanicilar={kullanicilar} setKullanicilar={setKullanicilar} superAdmin={superAdmin} setSuperAdmin={setSuperAdmin}/>;
 }
@@ -593,23 +752,24 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   };
 
   const bosUrunFormu = { 
-    ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", alisTarihi: getBugununTarihi(), alisFiyati:"", gorsel:"",
+    ad:"", cins:"İşlemci", marka:"", seriNo:"", aciklama:"", tedarikci:"", tedarikciTel:"", alisTarihi: getBugununTarihi(), alisFiyati:"", gorsel:"",
     kasaCpu:"", kasaMb:"", kasaRam:"", kasaSsd:"", kasaGpu:"", kasaPower:"", kasaModel:"", kasaNotes:""
   };
   const [form, setForm]               = useState(bosUrunFormu);
   const [duzenleForm, setDuzenleForm] = useState(bosUrunFormu);
-  const [satisForm, setSatisForm]     = useState({ fiyat: "", musteri: "", teslimAlan: "", manualEdit: false });
+  const [satisForm, setSatisForm]     = useState({ fiyat: "", musteri: "", musteriTel: "", saticiTel: "", teslimAlan: "", manualEdit: false });
   const [satisDuzenleModal, setSatisDuzenleModal] = useState(null);
-  const [satisDuzenleForm, setSatisDuzenleForm] = useState({ fiyat: "", musteri: "", teslimAlan: "" });
+  const [satisDuzenleForm, setSatisDuzenleForm] = useState({ fiyat: "", musteri: "", musteriTel: "", saticiTel: "", teslimAlan: "" });
   const [filtre, setFiltre]           = useState("");
   const [toast, setToast]             = useState(null);
   const [seciliSatislar, setSeciliSatislar] = useState([]);
+  const [aktifGorselIdx, setAktifGorselIdx] = useState(0);
 
   const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
   const yoneticiMi = yetki === "Yönetici";
 
   const stokYukle = async () => {
-    const rows = await dbSelect("products", "?select=*&order=created_at.asc");
+    const rows = await dbSelect("products", "?select=*&order=created_at.desc");
     setStok(rows.map(fromProduct));
   };
 
@@ -623,8 +783,63 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     if (yoneticiMi) satislariYukle().catch(()=>showToast("Satış geçmişi alınamadı!", "error"));
   }, []);
 
+  useEffect(() => {
+    if (kullanici === "Yusuf") return;
+    const interval = setInterval(async () => {
+      try {
+        const rows = await dbSelect("users", `?username=eq.${kullanici}`);
+        if (rows && rows.length > 0) {
+          const u = fromUser(rows[0]);
+          if (u.yetki !== yetki) {
+            showToast(`Yetkiniz "${u.yetki}" olarak değiştirildi. Yeniden giriş yapılıyor...`, "info");
+            setTimeout(() => {
+              const yeniOturum = { k: kullanici, y: u.yetki };
+              localStorage.setItem("yuksekStok_oturum", JSON.stringify(yeniOturum));
+              window.location.reload();
+            }, 1500);
+          }
+        } else {
+          showToast("Hesabınız silindi! Çıkış yapılıyor...", "error");
+          setTimeout(() => {
+            onCikis();
+          }, 1500);
+        }
+      } catch (e) {}
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [kullanici, yetki]);
+
   const activeStock = stok.filter(p => !p.seriNo.startsWith("[TRASH]_"));
   const activeSales = satisGecmisi.filter(s => !s.seriNo.startsWith("[TRASH]_"));
+
+  const handleFileChange = (e, isEdit = false) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (isEdit) {
+          setDuzenleForm(p => {
+            const currentList = getGorseller(p.gorsel);
+            if (!currentList.includes(reader.result)) {
+              const updated = [...currentList, reader.result].join("|||");
+              return { ...p, gorsel: updated };
+            }
+            return p;
+          });
+        } else {
+          setForm(p => {
+            const currentList = getGorseller(p.gorsel);
+            if (!currentList.includes(reader.result)) {
+              const updated = [...currentList, reader.result].join("|||");
+              return { ...p, gorsel: updated };
+            }
+            return p;
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   const toplamCesit = activeStock.length;
   const kategoriSayisi = new Set(activeStock.map(p=>p.cins)).size;
@@ -652,6 +867,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       }
     }
 
+    const tedarikciCompiled = form.tedarikciTel ? `${form.tedarikci} | Tel: ${form.tedarikciTel}` : form.tedarikci;
+
     const gonderilecekVeri = {
       name: form.ad,
       type: form.cins,
@@ -660,7 +877,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       description: aciklamaCompiled || null,
       image_url: form.gorsel || null,
       purchase_price: parseFloat(form.alisFiyati) || 0,
-      supplier: form.tedarikci || null,
+      supplier: tedarikciCompiled || null,
       purchase_date: form.alisTarihi || null
     };
 
@@ -679,7 +896,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     const parca = stok.find(p => p.id === id);
     if (!parca) return;
     try { 
-      const [guncel] = await dbUpdate("products", id, { serial_no: "[TRASH]_" + (parca.seriNo || "SYS") }); 
+      const [guncel] = await dbUpdate("products", id, { 
+        serial_no: "[TRASH]_" + (parca.seriNo || "SYS"),
+        description: (parca.aciklama || "") + "\nSilindi: " + kullanici + " (" + new Date().toLocaleString("tr-TR") + ")"
+      }); 
       setStok(prev=>prev.map(p=>p.id===id?fromProduct(guncel):p)); 
       setStokSilOnayModal(null);
       showToast("Parça çöp kutusuna taşındı","info"); 
@@ -713,6 +933,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   const duzenleAc = (parca) => {
     setDuzenleModal(parca);
     const specs = parseKasaSpecs(parca.aciklama || "");
+    const ted = parseTedarikci(parca.tedarikci);
     setDuzenleForm({
       ad: parca.ad,
       cins: parca.cins,
@@ -720,7 +941,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       seriNo: parca.seriNo || "",
       aciklama: parca.aciklama || "",
       gorsel: parca.gorsel || "",
-      tedarikci: parca.tedarikci || "",
+      tedarikci: ted.ad,
+      tedarikciTel: ted.tel,
       alisTarihi: parca.alisTarihi || "",
       alisFiyati: String(parca.alisFiyati),
       kasaCpu: specs.cpu || "",
@@ -757,15 +979,17 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       }
     }
 
+    const tedarikciCompiled = duzenleForm.tedarikciTel ? `${duzenleForm.tedarikci} | Tel: ${duzenleForm.tedarikciTel}` : duzenleForm.tedarikci;
+
     const guncelVeri = {
       name: duzenleForm.ad,
       type: duzenleForm.cins,
       brand: duzenleForm.marka,
       serial_no: seriNoCompiled || null,
-      description: aciklamaCompiled || null,
+      description: cleanEditLog(aciklamaCompiled) + "\nDüzenleyen: " + kullanici + " (" + new Date().toLocaleString("tr-TR") + ")",
       image_url: duzenleForm.gorsel || null,
       purchase_price: alisFiyati,
-      supplier: duzenleForm.tedarikci || null,
+      supplier: tedarikciCompiled || null,
       purchase_date: duzenleForm.alisTarihi || null
     };
 
@@ -782,9 +1006,13 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   // ─── SATIŞ GEÇMİŞİ FONKSİYONLARI ───
   const satisDuzenleAc = (satis) => {
     setSatisDuzenleModal(satis);
+    const alici = parseMusteri(satis.musteri);
+    const satan = parseSatanKullanici(satis.satanKullanici);
     setSatisDuzenleForm({
       fiyat: String(satis.fiyat),
-      musteri: satis.musteri,
+      musteri: alici.ad,
+      musteriTel: alici.tel,
+      saticiTel: satan.tel,
       teslimAlan: getTeslimAlan(satis)
     });
   };
@@ -801,11 +1029,15 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       return;
     }
 
+    const satan = parseSatanKullanici(satisDuzenleModal.satanKullanici);
+    const satanNameClean = satan.ad || kullanici;
+
     try {
       const [guncelRaw] = await dbUpdate("sales", satisDuzenleModal.id, {
         sale_price: yeniFiyat,
-        customer: satisDuzenleForm.musteri,
-        description: cleanDescription(satisDuzenleModal.aciklama) + "\nTeslim Alan: " + (satisDuzenleForm.teslimAlan || satisDuzenleForm.musteri)
+        customer: satisDuzenleForm.musteriTel ? `${satisDuzenleForm.musteri} | Tel: ${satisDuzenleForm.musteriTel}` : satisDuzenleForm.musteri,
+        sold_by: satisDuzenleForm.saticiTel ? `${satanNameClean} | Tel: ${satisDuzenleForm.saticiTel}` : satanNameClean,
+        description: cleanEditLog(satisDuzenleModal.aciklama) + "\nTeslim Alan: " + (satisDuzenleForm.teslimAlan || satisDuzenleForm.musteri) + "\nDüzenleyen: " + kullanici + " (" + new Date().toLocaleString("tr-TR") + ")"
       });
       
       setSatisGecmisi(prev => prev.map(s => s.id === satisDuzenleModal.id ? fromSale(guncelRaw) : s));
@@ -820,7 +1052,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     const satis = satisGecmisi.find(s => s.id === id);
     if (!satis) return;
     try {
-      const [guncel] = await dbUpdate("sales", id, { serial_no: "[TRASH]_" + (satis.seriNo || "SYS") });
+      const [guncel] = await dbUpdate("sales", id, { 
+        serial_no: "[TRASH]_" + (satis.seriNo || "SYS"),
+        description: (satis.aciklama || "") + "\nSilindi: " + kullanici + " (" + new Date().toLocaleString("tr-TR") + ")"
+      });
       setSatisGecmisi(prev => prev.map(s => s.id === id ? fromSale(guncel) : s));
       setSatisSilOnayModal(null);
       showToast("Satış kaydı çöp kutusuna taşındı", "info");
@@ -866,14 +1101,14 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         quantity:1,
         sale_price:parseFloat(satisForm.fiyat),
         purchase_price:parca.alisFiyati,
-        customer:satisForm.musteri,
-        sold_by:kullanici
+        customer: satisForm.musteriTel ? `${satisForm.musteri} | Tel: ${satisForm.musteriTel}` : satisForm.musteri,
+        sold_by: satisForm.saticiTel ? `${kullanici} | Tel: ${satisForm.saticiTel}` : kullanici
       });
       try { await dbDelete("products", satisModal.id); } catch {}
       setStok(prev=>prev.filter(p=>p.id!==satisModal.id));
       setSatisGecmisi(prev=>[fromSale(satis),...prev]);
       setSatisModal(null); 
-      setSatisForm({ fiyat: "", musteri: "", teslimAlan: "", manualEdit: false }); 
+      setSatisForm({ fiyat: "", musteri: "", musteriTel: "", saticiTel: "", teslimAlan: "", manualEdit: false }); 
       showToast(`Satış tamamlandı ✓`);
     } catch {
       showToast("Satış kaydedilemedi!", "error");
@@ -881,6 +1116,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
   };
 
   const satisYazdir = (satis) => {
+    const alici = parseMusteri(satis.musteri);
+    const satan = parseSatanKullanici(satis.satanKullanici);
+    const teslimAlan = getTeslimAlan(satis);
     const belge = window.open("", "_blank", "width=760,height=900");
     if (!belge) { showToast("Yazdırma penceresi açılamadı!", "error"); return; }
     belge.document.write(`
@@ -911,7 +1149,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <div class="field"><div class="label">Seri No</div><div class="value">${satis.seriNo || "-"}</div></div>
             <div class="field"><div class="label">Cinsi</div><div class="value">${satis.cins}</div></div>
             <div class="field"><div class="label">Marka</div><div class="value">${satis.marka}</div></div>
-            <div class="field"><div class="label">Müşteri / Alıcı</div><div class="value">${satis.musteri}</div></div>
+            <div class="field"><div class="label">Müşteri / Alıcı</div><div class="value">${alici.ad} ${alici.tel ? `<br/><span style='font-size:12px;font-weight:normal;color:#64748b;'>Tel: ${alici.tel}</span>` : ""}</div></div>
             <div class="field" style="grid-column: span 2;"><div class="label">Ürün Açıklaması / Garanti - Arıza Notu</div><div class="value">${cleanDescription(satis.aciklama)}</div></div>
           </div>
           <div class="total">
@@ -920,8 +1158,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             </div>
           </div>
           <div class="signatures">
-            <div class="sig-box">Teslim Eden Yetkili<span style="font-size:14px;color:#111827;display:block;margin-top:24px;font-weight:700;">${satis.satanKullanici || "-"}</span></div>
-            <div class="sig-box">Teslim Alan Alıcı / Vekili<span style="font-size:14px;color:#111827;display:block;margin-top:24px;font-weight:700;">${getTeslimAlan(satis)}</span></div>
+            <div class="sig-box">Teslim Eden Yetkili<span style="font-size:14px;color:#111827;display:block;margin-top:24px;font-weight:700;">${satan.ad} ${satan.tel ? `<br/><span style='font-size:11px;font-weight:normal;color:#64748b;'>${satan.tel}</span>` : ""}</span></div>
+            <div class="sig-box">Teslim Alan Alıcı / Vekili<span style="font-size:14px;color:#111827;display:block;margin-top:24px;font-weight:700;">${teslimAlan}</span></div>
           </div>
           <br/>
           <button class="no-print" onclick="window.print()" style="margin-top:20px;padding:12px 18px;border:0;border-radius:10px;background:#111227;color:#fff;font-weight:700;cursor:pointer">Yazdır</button>
@@ -937,11 +1175,12 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
     const salesToPrint = activeSales.filter(s => seciliIds.includes(s.id));
     if (salesToPrint.length === 0) { showToast("Yazdırılacak satış seçilmedi!", "error"); return; }
     
-    const musteri = salesToPrint[0].musteri;
-    const teslimAlan = getTeslimAlan(salesToPrint[0]);
-    const satanKullanici = salesToPrint[0].satanKullanici;
+    const firstSale = salesToPrint[0];
+    const alici = parseMusteri(firstSale.musteri);
+    const satan = parseSatanKullanici(firstSale.satanKullanici);
+    const teslimAlan = getTeslimAlan(firstSale);
     const toplamFiyat = salesToPrint.reduce((sum, s) => sum + s.fiyat, 0);
-    const tarih = salesToPrint[0].tarih;
+    const tarih = firstSale.tarih;
     
     const belge = window.open("", "_blank", "width=760,height=900");
     if (!belge) { showToast("Yazdırma penceresi açılamadı!", "error"); return; }
@@ -986,8 +1225,8 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           <div class="header"><div><h1>Toplu Ürün Teslim Formu</h1><div class="sub">ZAMAZINGOTR TEKNOLOJİ</div></div><div>${tarih}</div></div>
           
           <div class="grid">
-            <div class="field"><div class="label">Müşteri / Alıcı</div><div class="value">${musteri}</div></div>
-            <div class="field"><div class="label">Teslim Eden Personel</div><div class="value">${satanKullanici || "-"}</div></div>
+            <div class="field"><div class="label">Müşteri / Alıcı</div><div class="value">${alici.ad} ${alici.tel ? `<span style="font-size:12px;font-weight:normal;color:#64748b;">(Tel: ${alici.tel})</span>` : ""}</div></div>
+            <div class="field"><div class="label">Teslim Eden Personel</div><div class="value">${satan.ad} ${satan.tel ? `<span style="font-size:12px;font-weight:normal;color:#64748b;">(Tel: ${satan.tel})</span>` : ""}</div></div>
           </div>
 
           <div class="table-wrapper">
@@ -1013,7 +1252,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           </div>
           
           <div class="signatures">
-            <div class="sig-box">Teslim Eden Yetkili<span style="font-size:14px;color:#111827;display:block;margin-top:24px;font-weight:700;">${satanKullanici || "-"}</span></div>
+            <div class="sig-box">Teslim Eden Yetkili<span style="font-size:14px;color:#111827;display:block;margin-top:24px;font-weight:700;">${satan.ad} ${satan.tel ? `<br/><span style='font-size:11px;font-weight:normal;color:#64748b;'>${satan.tel}</span>` : ""}</span></div>
             <div class="sig-box">Teslim Alan Alıcı / Vekili<span style="font-size:14px;color:#111827;display:block;margin-top:24px;font-weight:700;">${teslimAlan}</span></div>
           </div>
           <br/>
@@ -1045,14 +1284,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
       p.marka.toLowerCase().includes(filtre.toLowerCase())||
       p.cins.toLowerCase().includes(filtre.toLowerCase())
     )
-    .sort((a, b) => {
-      const tarihA = a.alisTarihi ? new Date(a.alisTarihi).getTime() : 0;
-      const tarihB = b.alisTarihi ? new Date(b.alisTarihi).getTime() : 0;
-      if (tarihB !== tarihA) {
-        return tarihB - tarihA;
-      }
-      return b.id.localeCompare(a.id);
-    });
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   return (
     <div style={{ fontFamily:"'Outfit',sans-serif", background:"#0f1117", minHeight:"100vh", color:"#e2e8f0" }}>
@@ -1135,7 +1367,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           <div>
             <div style={{ fontSize:20, fontWeight:800, letterSpacing:"-.5px", background:"linear-gradient(135deg,#a78bfa,#60a5fa)",
               WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>ZamazingoTr</div>
-            <div style={{ fontSize:11, color:"#64748b", marginTop:-2, letterSpacing:1 }}>STOK TAKİP ZAMAZİNGOSU</div>
+            <div style={{ fontSize:11, color:"#64748b", marginTop:-2, letterSpacing:1 }}>STOK TAKİP SİSTEMİ</div>
           </div>
         </div>
 
@@ -1146,7 +1378,9 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
           </span>
 
           {yetki === "Yönetici" && (
-            <button onClick={()=>setAdminModal(true)} style={{
+            <button onClick={() => {
+              window.open(window.location.href.split(/[?#]/)[0] + "?page=admin", "_blank");
+            }} style={{
               background:"linear-gradient(135deg,#f59e0b,#ef4444)", color:"#fff", border:"none",
               padding:"10px 18px", borderRadius:12, fontWeight:700, fontSize:13,
               cursor:"pointer", fontFamily:"'Outfit',sans-serif", display:"flex", alignItems:"center", gap:7,
@@ -1190,7 +1424,11 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
         <div style={{ display:"flex", gap:4, marginBottom:20, background:"#1a1d2e", borderRadius:12, padding:4, width:"fit-content", border:"1px solid #2a2d3e", flexWrap:"wrap" }}>
           {[
             {key:"stok",label:"📋 Stok Listesi"}, 
-            ...(yoneticiMi ? [{key:"gecmis",label:"📊 Satış Geçmişi"},{key:"gelir",label:"💰 Gelir-Gider"},{key:"cop",label:"🗑️ Çöp Kutusu"}] : [])
+            ...(yoneticiMi ? [
+              {key:"gecmis",label:"📊 Satış Geçmişi"},
+              {key:"gelir",label:"💰 Gelir-Gider"},
+              ...(isSuperAdmin(kullanici) ? [{key:"cop",label:"🗑️ Çöp Kutusu"}] : [])
+            ] : [])
           ].map(s=>(
             <button key={s.key} onClick={()=>setAktifSekme(s.key)} style={{
               padding:"8px 20px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:600, fontSize:13,
@@ -1211,7 +1449,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
               <thead>
                 <tr style={{ background:"#13162a" }}>
-                  {["Parça Adı","Cinsi","Marka","Seri No","Alınan Yer","Alış Fiyatı","Alış tarihi","İşlemler"].map((h,i)=>(
+                  {["Parça Adı","Cinsi","Marka","Seri No","Alınan Yer","Telefon No","Alış Fiyatı","Alış tarihi","İşlemler"].map((h,i)=>(
                     <th key={i} style={{ padding:"14px 16px", textAlign:"left", fontSize:11, fontWeight:700,
                       color:"#64748b", letterSpacing:1, textTransform:"uppercase", borderBottom:"1px solid #2a2d3e" }}>{h}</th>
                   ))}
@@ -1219,7 +1457,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               </thead>
               <tbody>
                 {filtrelenmis.length===0
-                  ? <tr><td colSpan={8} style={{ textAlign:"center", padding:40, color:"#64748b" }}>Parça bulunamadı</td></tr>
+                  ? <tr><td colSpan={9} style={{ textAlign:"center", padding:40, color:"#64748b" }}>Parça bulunamadı</td></tr>
                   : filtrelenmis.map(p=>{
                     const rk = CINS_RENKLERI[p.cins]||{bg:"rgba(255,255,255,.05)",text:"#94a3b8",border:"#334155"};
                     return (
@@ -1229,16 +1467,42 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                         onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <td style={{ padding:"13px 16px", fontWeight:600, fontSize:14 }}>{p.ad}</td>
                         <td style={{ padding:"13px 16px" }}>
-                          <span style={{ background:rk.bg, color:rk.text, border:`1px solid ${rk.border}`, padding:"3px 10px", borderRadius:20, fontSize:12, fontWeight:600 }}>{p.cins}</span>
+                          <span style={{ background:rk.bg, color:rk.text, border:`1px solid ${rk.border}`, padding:"3px 10px", borderRadius:20, fontSize:12, fontWeight:600 }}>
+                            {CINS_IKONLARI[p.cins] || "📦"} {p.cins}
+                          </span>
                         </td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.marka}</td>
                         <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12, fontFamily:"monospace" }}>{p.seriNo||"—"}</td>
-                        <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:600 }}>{p.tedarikci||"—"}</td>
+                        <td style={{ padding:"13px 16px", color:"#e2e8f0", fontSize:14, fontWeight:600 }}>
+                          {parseTedarikci(p.tedarikci).ad || "—"}
+                        </td>
+                        <td style={{ padding:"13px 16px" }}>
+                          {(() => {
+                            const ted = parseTedarikci(p.tedarikci);
+                            return ted.tel ? (
+                              <span style={{ background:"rgba(46,213,115,.12)", color:"#2ed573", border:"1px solid rgba(46,213,115,.3)", padding:"4px 10px", borderRadius:8, fontSize:12, fontWeight:600, display:"inline-flex", alignItems:"center", gap:"4px" }}>
+                                📞 {ted.tel}
+                              </span>
+                            ) : "—";
+                          })()}
+                        </td>
                         <td style={{ padding:"13px 16px", color:"#a78bfa", fontWeight:600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
                         <td style={{ padding:"13px 16px", color:"#94a3b8", fontSize:14 }}>{p.alisTarihi ? new Date(p.alisTarihi).toLocaleDateString("tr-TR") : "—"}</td>
                         <td style={{ padding:"13px 16px" }}>
                           <div style={{ display:"flex", gap:8 }}>
-                            <button onClick={(e)=>{e.stopPropagation(); setSatisModal(p); setSatisForm({ fiyat: "", musteri: "", teslimAlan: "", manualEdit: false })}} style={{
+                            <button onClick={(e)=>{
+                              e.stopPropagation(); 
+                              const activeUserObj = [superAdmin, ...kullanicilar].find(u => u.kullaniciAdi === kullanici);
+                              setSatisModal(p); 
+                              setSatisForm({ 
+                                fiyat: "", 
+                                musteri: "", 
+                                musteriTel: "", 
+                                saticiTel: activeUserObj ? activeUserObj.telefon : "", 
+                                teslimAlan: "", 
+                                manualEdit: false 
+                              });
+                            }} style={{
                               background:"rgba(46,213,115,.12)", color:"#2ed573", border:"1px solid rgba(46,213,115,.3)",
                               padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Outfit',sans-serif" }}>🛒 Sat</button>
                             <button onClick={(e)=>{e.stopPropagation(); duzenleAc(p)}} style={{
@@ -1335,7 +1599,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
               : <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
                   <thead>
                     <tr style={{ background:"#13162a" }}>
-                      {["", "Tarih","Ürün","Seri No","Cinsi","Satış Fiyatı","Müşteri","İşlemi Yapan","İşlemler"].map((h,i)=>(
+                      {["", "Tarih","Ürün","Seri No","Cinsi","Satış Fiyatı","Müşteri","Telefon No","İşlemi Yapan","İşlemler"].map((h,i)=>(
                         <th key={i} style={{ padding:"14px 16px", textAlign:"left", fontSize:11, fontWeight:700,
                           color:"#64748b", letterSpacing:1, textTransform:"uppercase", borderBottom:"1px solid #2a2d3e" }}>{h}</th>
                       ))}
@@ -1362,7 +1626,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                           </td>
                           <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12 }}>{s.tarih}</td>
                           <td style={{ padding:"13px 16px" }}>
-                            <button onClick={()=>setSatisDetayModal(s)} style={{ background:"transparent", border:"none", color:"#e2e8f0", fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Outfit',sans-serif", padding:0, textAlign:"left" }}>{s.parcaAd}</button>
+                            <button onClick={()=>{setSatisDetayModal(s); setAktifGorselIdx(0);}} style={{ background:"transparent", border:"none", color:"#e2e8f0", fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Outfit',sans-serif", padding:0, textAlign:"left" }}>{s.parcaAd}</button>
                           </td>
                           <td style={{ padding:"13px 16px", color:"#64748b", fontSize:12, fontFamily:"monospace" }}>{s.seriNo||"—"}</td>
                           <td style={{ padding:"13px 16px" }}>
@@ -1370,9 +1634,51 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                           </td>
                           <td style={{ padding:"13px 16px", color:"#2ed573", fontWeight:700 }}>{s.fiyat.toLocaleString("tr-TR")} ₺</td>
                           <td style={{ padding:"13px 16px" }}>
-                            <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:13, fontWeight:600 }}>👤 {s.musteri}</span>
+                            {(() => {
+                              const m = parseMusteri(s.musteri);
+                              return (
+                                <span style={{ 
+                                  background:"rgba(108,99,255,.12)", 
+                                  color:"#a78bfa", 
+                                  padding:"4px 12px", 
+                                  borderRadius:20, 
+                                  fontSize:13, 
+                                  fontWeight:600,
+                                  width:"fit-content",
+                                  display:"inline-flex",
+                                  alignItems:"center",
+                                  gap:"4px"
+                                }}>
+                                  👤 {m.ad || "—"}
+                                </span>
+                              );
+                            })()}
                           </td>
-                          <td style={{ padding:"13px 16px", color:"#64748b", fontSize:13 }}>{s.satanKullanici||"—"}</td>
+                          <td style={{ padding:"13px 16px" }}>
+                            {(() => {
+                              const m = parseMusteri(s.musteri);
+                              return m.tel ? (
+                                <span style={{ background:"rgba(108,99,255,.12)", color:"#a78bfa", border:"1px solid rgba(108,99,255,.3)", padding:"4px 10px", borderRadius:8, fontSize:12, fontWeight:600, display:"inline-flex", alignItems:"center", gap:"4px" }}>
+                                  📞 {m.tel}
+                                </span>
+                              ) : "—";
+                            })()}
+                          </td>
+                          <td style={{ padding:"13px 16px" }}>
+                            {(() => {
+                              const sat = parseSatanKullanici(s.satanKullanici);
+                              return (
+                                <div style={{ display:"flex", flexDirection:"column", gap:"3px" }}>
+                                  <span style={{ color:"#e2e8f0", fontSize:13, fontWeight:600 }}>{sat.ad || "—"}</span>
+                                  {sat.tel && (
+                                    <span style={{ fontSize:11, color:"#64748b", display:"flex", alignItems:"center", gap:"4px" }}>
+                                      📞 {sat.tel}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
                           <td style={{ padding:"13px 16px" }}><div style={{ display:"flex", gap:8 }}><button onClick={()=>satisDuzenleAc(s)} style={{ background:"rgba(58,134,255,.12)", color:"#60a5fa", border:"1px solid rgba(58,134,255,.3)", padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Düzenle</button><button onClick={()=>setSatisSilOnayModal(s)} style={{ background:"rgba(255,107,107,.12)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", padding:"6px 10px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Sil</button></div></td>
                         </tr>
                       );
@@ -1405,7 +1711,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 : <table style={{ width:"100%", borderCollapse:"collapse", minWidth:"700px" }}>
                     <thead>
                       <tr style={{ background:"#13162a" }}>
-                        {["Tarih","Ürün","Gelir","Gider","Kar","Müşteri"].map((h,i)=>(
+                        {["Tarih","Ürün","Gelir","Gider","Kar","Müşteri","Telefon No"].map((h,i)=>(
                           <th key={i} style={{ padding:"14px 16px", textAlign:"left", fontSize:11, fontWeight:700,
                             color:"#64748b", letterSpacing:1, textTransform:"uppercase", borderBottom:"1px solid #2a2d3e" }}>{h}</th>
                         ))}
@@ -1424,7 +1730,35 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                             <td style={{ padding:"13px 16px", color:"#ff6b6b", fontWeight:700 }}>{gider.toLocaleString("tr-TR")} ₺</td>
                             <td style={{ padding:"13px 16px", color:kar>=0?"#a78bfa":"#ff6b6b", fontWeight:800 }}>{kar.toLocaleString("tr-TR")} ₺</td>
                             <td style={{ padding:"13px 16px" }}>
-                              <span style={{ background:"rgba(108,99,255,.15)", color:"#a78bfa", padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:600 }}>👤 {s.musteri}</span>
+                              {(() => {
+                                const m = parseMusteri(s.musteri);
+                                return (
+                                  <span style={{ 
+                                    background:"rgba(108,99,255,.12)", 
+                                    color:"#a78bfa", 
+                                    padding:"4px 12px", 
+                                    borderRadius:20, 
+                                    fontSize:12, 
+                                    fontWeight:600,
+                                    width:"fit-content",
+                                    display:"inline-flex",
+                                    alignItems:"center",
+                                    gap:"4px"
+                                  }}>
+                                    👤 {m.ad || "—"}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                            <td style={{ padding:"13px 16px" }}>
+                              {(() => {
+                                const m = parseMusteri(s.musteri);
+                                return m.tel ? (
+                                  <span style={{ background:"rgba(108,99,255,.12)", color:"#a78bfa", border:"1px solid rgba(108,99,255,.3)", padding:"4px 10px", borderRadius:8, fontSize:11, fontWeight:600, display:"inline-flex", alignItems:"center", gap:"4px" }}>
+                                    📞 {m.tel}
+                                  </span>
+                                ) : "—";
+                              })()}
                             </td>
                           </tr>
                         );
@@ -1435,7 +1769,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
             </div>
           </div>
         )}
-        {aktifSekme === "cop" && yoneticiMi && (() => {
+        {aktifSekme === "cop" && isSuperAdmin(kullanici) && (() => {
           const silinenUrunler = stok.filter(p => p.seriNo.startsWith("[TRASH]_"));
           const silinenSatislar = satisGecmisi.filter(s => s.seriNo.startsWith("[TRASH]_"));
 
@@ -1450,7 +1784,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                     <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
                       <thead>
                         <tr style={{ background: "#13162a" }}>
-                          {["Parça Adı", "Cinsi", "Marka", "Orijinal Seri No", "Maliyet", "İşlemler"].map((h, i) => (
+                          {["Parça Adı", "Cinsi", "Marka", "Orijinal Seri No", "Maliyet", "Silen Personel", "İşlemler"].map((h, i) => (
                             <th key={i} style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, borderBottom: "1px solid #2a2d3e" }}>{h}</th>
                           ))}
                         </tr>
@@ -1465,6 +1799,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                               <td style={{ padding: "13px 16px", color: "#94a3b8", fontSize: 13 }}>{p.marka}</td>
                               <td style={{ padding: "13px 16px", color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>{originalSeriNo}</td>
                               <td style={{ padding: "13px 16px", color: "#a78bfa", fontWeight: 600 }}>{p.alisFiyati.toLocaleString("tr-TR")} ₺</td>
+                              <td style={{ padding: "13px 16px", color: "#ff6b6b", fontWeight: 600, fontSize: 13 }}>{getSiliciInfo(p.aciklama) || "Bilinmiyor"}</td>
                               <td style={{ padding: "13px 16px" }}>
                                 <div style={{ display: "flex", gap: 8 }}>
                                   <button onClick={() => parcaGeriYukle(p)} style={{ background: "rgba(46,213,115,.12)", color: "#2ed573", border: "1px solid rgba(46,213,115,.3)", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}>↩ Geri Yükle</button>
@@ -1489,7 +1824,7 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                     <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
                       <thead>
                         <tr style={{ background: "#13162a" }}>
-                          {["Tarih", "Ürün", "Müşteri", "Satış Fiyatı", "Satan Personel", "İşlemler"].map((h, i) => (
+                          {["Tarih", "Ürün", "Müşteri", "Telefon No", "Satış Fiyatı", "Satan Personel", "Silen Personel", "İşlemler"].map((h, i) => (
                             <th key={i} style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, borderBottom: "1px solid #2a2d3e" }}>{h}</th>
                           ))}
                         </tr>
@@ -1499,9 +1834,36 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                           <tr key={s.id} style={{ borderBottom: "1px solid #2a2d3e" }}>
                             <td style={{ padding: "13px 16px", color: "#64748b", fontSize: 12 }}>{s.tarih}</td>
                             <td style={{ padding: "13px 16px", fontWeight: 600, fontSize: 14 }}>{s.parcaAd}</td>
-                            <td style={{ padding: "13px 16px", fontSize: 13 }}>{s.musteri}</td>
+                            <td style={{ padding: "13px 16px", color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>
+                              👤 {parseMusteri(s.musteri).ad || "—"}
+                            </td>
+                            <td style={{ padding: "13px 16px" }}>
+                              {(() => {
+                                const m = parseMusteri(s.musteri);
+                                return m.tel ? (
+                                  <span style={{ background:"rgba(108,99,255,.12)", color:"#a78bfa", border:"1px solid rgba(108,99,255,.3)", padding:"4px 10px", borderRadius:8, fontSize:11, fontWeight:600, display:"inline-flex", alignItems:"center", gap:"4px" }}>
+                                    📞 {m.tel}
+                                  </span>
+                                ) : "—";
+                              })()}
+                            </td>
                             <td style={{ padding: "13px 16px", color: "#2ed573", fontWeight: 700 }}>{s.fiyat.toLocaleString("tr-TR")} ₺</td>
-                            <td style={{ padding: "13px 16px", color: "#64748b", fontSize: 13 }}>{s.satanKullanici}</td>
+                            <td style={{ padding: "13px 16px" }}>
+                              {(() => {
+                                const sat = parseSatanKullanici(s.satanKullanici);
+                                return (
+                                  <div style={{ display:"flex", flexDirection:"column", gap:"3px" }}>
+                                    <span style={{ color:"#e2e8f0", fontSize:13, fontWeight:600 }}>{sat.ad || "—"}</span>
+                                    {sat.tel && (
+                                      <span style={{ fontSize:11, color:"#64748b", display:"flex", alignItems:"center", gap:"4px" }}>
+                                        📞 {sat.tel}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                            <td style={{ padding: "13px 16px", color: "#ff6b6b", fontWeight: 600, fontSize: 13 }}>{getSiliciInfo(s.aciklama) || "Bilinmiyor"}</td>
                             <td style={{ padding: "13px 16px" }}>
                               <div style={{ display: "flex", gap: 8 }}>
                                 <button onClick={() => satisGeriYukle(s)} style={{ background: "rgba(46,213,115,.12)", color: "#2ed573", border: "1px solid rgba(46,213,115,.3)", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}>↩ Geri Yükle</button>
@@ -1538,9 +1900,15 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   ["Seri No", satisDetayModal.seriNo || "—"],
                   ["Cinsi", satisDetayModal.cins],
                   ["Marka", satisDetayModal.marka],
-                  ["Müşteri / Alıcı", satisDetayModal.musteri],
+                  ["Müşteri / Alıcı", (() => {
+                    const m = parseMusteri(satisDetayModal.musteri);
+                    return m.tel ? `${m.ad} (Tel: ${m.tel})` : m.ad;
+                  })()],
                   ["Teslim Alan Kişi", getTeslimAlan(satisDetayModal)],
-                  ["İşlemi Yapan", satisDetayModal.satanKullanici || "—"],
+                  ["İşlemi Yapan", (() => {
+                    const s = parseSatanKullanici(satisDetayModal.satanKullanici);
+                    return s.tel ? `${s.ad} (Tel: ${s.tel})` : s.ad;
+                  })()],
                   ["Satış Bedeli", `${satisDetayModal.fiyat.toLocaleString("tr-TR")} ₺`],
                   ["Ürün Açıklaması", cleanDescription(satisDetayModal.aciklama)]
                 ].map(([label,value])=>(
@@ -1550,132 +1918,78 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   </div>
                 ))}
               </div>
-              {satisDetayModal.gorsel && (
-                <div style={{ marginBottom: 16, background: "#13162a", border: "1px solid #2a2d3e", borderRadius: 12, padding: "14px" }}>
-                  <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, marginBottom: 10 }}>📄 Kayıtlı Fatura / Görsel</div>
-                  
-                  <div 
-                    onClick={() => {
-                      const win = window.open("", "_blank");
-                      if (win) {
-                        win.document.write(`
-                          <!doctype html>
-                          <html>
-                          <head>
-                            <title>Fatura Önizleme - ZamazingoTr</title>
-                            <style>
-                              body { margin:0; display:flex; justify-content:center; align-items:center; background:#0f1117; min-height:100vh; font-family:'Outfit',sans-serif; }
-                              img { max-width:95%; max-height:95vh; object-fit:contain; border-radius:12px; box-shadow:0 30px 70px rgba(0,0,0,0.6); border:1px solid #2a2d3e; }
-                            </style>
-                          </head>
-                          <body>
-                            <img src="${satisDetayModal.gorsel}" alt="Fatura" />
-                          </body>
-                          </html>
-                        `);
-                        win.document.close();
-                      }
-                    }}
-                    title="Büyütmek için tıklayın"
-                    style={{
-                      position: "relative",
-                      width: "100%",
-                      height: "160px",
-                      borderRadius: 10,
-                      overflow: "hidden",
-                      background: "#0f1117",
-                      border: "1px solid #2a2d3e",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease-in-out",
-                    }}
-                    onMouseEnter={e => { 
-                      e.currentTarget.style.transform = "scale(1.02)"; 
-                      e.currentTarget.style.borderColor = "#6c63ff";
-                      const ov = e.currentTarget.querySelector('.detay-overlay');
-                      if (ov) ov.style.opacity = "1";
-                    }}
-                    onMouseLeave={e => { 
-                      e.currentTarget.style.transform = "scale(1)"; 
-                      e.currentTarget.style.borderColor = "#2a2d3e"; 
-                      const ov = e.currentTarget.querySelector('.detay-overlay');
-                      if (ov) ov.style.opacity = "0";
-                    }}
-                  >
-                    <img src={satisDetayModal.gorsel} alt="Fatura" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
-                    <div 
-                      className="detay-overlay"
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "rgba(15,17,23,0.5)",
-                        opacity: 0,
-                        transition: "opacity 0.2s ease",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#fff",
-                        fontSize: 14,
-                        fontWeight: 600,
-                        pointerEvents: "none"
-                      }}
-                    >
-                      🔍 Yeni Sekmede Aç
-                    </div>
+            {(() => {
+              const gorseller = getGorseller(satisDetayModal.gorsel);
+              if (gorseller.length === 0) return null;
+              
+              return (
+                <div style={{ 
+                  marginBottom: 20, 
+                  background: "#13162a", 
+                  border: "1px solid #2a2d3e", 
+                  borderRadius: 16, 
+                  padding: 16,
+                  boxShadow: "0 8px 30px rgba(0,0,0,0.3)"
+                }}>
+                  <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>
+                    📸 Kayıtlı Faturalar / Ürün Görselleri ({gorseller.length})
                   </div>
-
-                  <button 
-                    onClick={() => {
-                      const gorsel = satisDetayModal.gorsel;
-                      const belge = window.open("", "_blank");
-                      if (belge) {
-                        belge.document.write(`
-                          <!doctype html>
-                          <html>
-                          <head>
-                            <title>Fatura Yazdır - ZamazingoTr</title>
-                            <style>
-                              body { margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#fff; }
-                              img { max-width:100%; max-height:100vh; object-fit:contain; }
-                              @media print {
-                                body { background:#fff; }
-                                img { max-width:100%; max-height:100%; }
-                              }
-                            </style>
-                          </head>
-                          <body>
-                            <img src="${gorsel}" onload="window.print();" />
-                          </body>
-                          </html>
-                        `);
-                        belge.document.close();
-                      }
-                    }} 
-                    style={{
-                      width: "100%",
-                      marginTop: 10,
-                      padding: "10px",
-                      borderRadius: 10,
-                      border: "none",
-                      background: "linear-gradient(135deg,#10b981,#059669)",
-                      color: "#fff",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontSize: 13,
-                      fontFamily: "'Outfit',sans-serif",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 6,
-                      boxShadow: "0 4px 12px rgba(16,185,129,.2)"
-                    }}
-                  >
-                    🖨️ Faturayı Yazdır / İndir
-                  </button>
+                  
+                  <div style={{ position: "relative", width: "100%", height: 220, borderRadius: 12, overflow: "hidden", background: "#0f1117", border: "1px solid #2a2d3e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img 
+                      src={gorseller[aktifGorselIdx % gorseller.length]} 
+                      alt="Ürün Görseli" 
+                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", cursor: "zoom-in" }} 
+                      onClick={() => {
+                        const win = window.open("", "_blank");
+                        if (win) {
+                          win.document.write(`
+                            <!doctype html>
+                            <html>
+                            <head>
+                              <title>Görsel Önizleme - ZamazingoTr</title>
+                              <style>
+                                body { margin:0; display:flex; justify-content:center; align-items:center; background:#0f1117; min-height:100vh; }
+                                img { max-width:95%; max-height:95vh; object-fit:contain; border-radius:12px; box-shadow:0 30px 70px rgba(0,0,0,0.6); }
+                              </style>
+                            </head>
+                            <body>
+                              <img src="${gorseller[aktifGorselIdx % gorseller.length]}" alt="Görsel" />
+                            </body>
+                            </html>
+                          `);
+                          win.document.close();
+                        }
+                      }}
+                      title="Büyütmek için tıklayın"
+                    />
+                    
+                    {gorseller.length > 1 && (
+                      <>
+                        <button 
+                          type="button"
+                          onClick={() => setAktifGorselIdx(prev => (prev - 1 + gorseller.length) % gorseller.length)}
+                          style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(108,99,255,0.8)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, cursor: "pointer", fontWeight: "bold", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
+                        >
+                          ‹
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setAktifGorselIdx(prev => (prev + 1) % gorseller.length)}
+                          style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(108,99,255,0.8)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, cursor: "pointer", fontWeight: "bold", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
+                        >
+                          ›
+                        </button>
+                        
+                        <div style={{ position: "absolute", bottom: 8, background: "rgba(0,0,0,0.6)", padding: "3px 10px", borderRadius: 10, fontSize: 11, color: "#fff", fontWeight: 600 }}>
+                          {((aktifGorselIdx % gorseller.length) + 1)} / {gorseller.length}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              )}
+              );
+            })()}
               <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
                 <button onClick={()=>setSatisDetayModal(null)} style={{ flex:1, minWidth:"100px", padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>Kapat</button>
                 <button onClick={()=>satisYazdir(satisDetayModal)} style={{ flex:2, minWidth:"160px", padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>🖨️ Teslim Formu Yazdır</button>
@@ -1704,6 +2018,10 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 <input list={f.key==="ad"?"urun-adlari":undefined} value={form[f.key]} onBlur={e=>f.key==="ad"&&urunBilgisiDoldur(e.target.value)} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} placeholder={f.placeholder} style={inp()}/>
               </div>
             ))}
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Tedarikçi Telefon No</label>
+              <input type="text" value={form.tedarikciTel} onChange={e=>setForm(p=>({...p,tedarikciTel:e.target.value}))} placeholder="Örn: 0555 123 4567" style={inp()}/>
+            </div>
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Cinsi</label>
               <select value={form.cins} onChange={e=>setForm(p=>({...p,cins:e.target.value}))} style={inp()}>
@@ -1750,277 +2068,86 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                 </div>
               ))}
             </div>
-            <div style={{ marginBottom:22 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Fatura / Görsel Yükle</label>
+            <div style={{ 
+              marginBottom:22, 
+              background: "rgba(19,22,42,0.6)", 
+              border: "1px solid rgba(108,99,255,0.15)", 
+              borderRadius: 16, 
+              padding: 16,
+              boxShadow: "inset 0 0 12px rgba(108,99,255,0.05)"
+            }}>
+              <label style={{ fontSize:11, fontWeight:700, color:"#a78bfa", display:"block", marginBottom:12, textTransform:"uppercase", letterSpacing:1 }}>
+                📸 Ürün Fotoğrafları / Faturalar
+              </label>
               
-              <input type="file" accept="image/*" onChange={(e)=>{
-                const file = e.target.files[0];
-                if(file){
-                  const reader = new FileReader();
-                  reader.onloadend = () => { setForm(p => ({ ...p, gorsel: reader.result })); };
-                  reader.readAsDataURL(file);
-                }
-              }} style={{ display:"none" }} id="yeni-file" />
+              <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e, false)} style={{ display:"none" }} id="yeni-file" />
 
-              {!form.gorsel ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: 12 }}>
+                {getGorseller(form.gorsel).map((imgBase64, idx) => (
+                  <div key={idx} style={{ 
+                    position: "relative", 
+                    width: 76, 
+                    height: 76, 
+                    borderRadius: 12, 
+                    overflow: "hidden", 
+                    background: "#0b0c16", 
+                    border: "1px solid rgba(108,99,255,0.25)", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                    transition: "transform 0.2s ease"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                  >
+                    <img src={imgBase64} alt="Görsel" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setForm(p => {
+                          const list = getGorseller(p.gorsel).filter((_, i) => i !== idx);
+                          return { ...p, gorsel: list.join("|||") };
+                        });
+                      }} 
+                      style={{ 
+                        position: "absolute", 
+                        top: 4, 
+                        right: 4, 
+                        background: "rgba(239,68,68,0.9)", 
+                        border: "none", 
+                        color: "#fff", 
+                        width: 20, 
+                        height: 20, 
+                        borderRadius: "50%", 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        fontSize: 10, 
+                        cursor: "pointer", 
+                        fontWeight: "bold",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+                      }}
+                      title="Görseli kaldır"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                
                 <label htmlFor="yeni-file" style={{
-                  display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-                  border:"2px dashed #2a2d3e", borderRadius:14, padding:"24px 16px", cursor:"pointer",
-                  background:"#13162a", transition:"all 0.2s ease-in-out", textAlign:"center"
+                  width: 76, 
+                  height: 76, 
+                  borderRadius: 12, 
+                  border: "2px dashed rgba(108,99,255,0.4)",
+                  display: "flex", 
+                  flexDirection: "column", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  cursor: "pointer", 
+                  background: "rgba(108,99,255,0.04)", 
+                  transition: "all 0.2s ease", 
+                  textAlign: "center"
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#6c63ff"; e.currentTarget.style.background = "#181b35"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2d3e"; e.currentTarget.style.background = "#13162a"; }}
-                >
-                  <div style={{ fontSize:28, marginBottom:8 }}>📤</div>
-                  <div style={{ fontSize:14, fontWeight:700, color:"#a78bfa", marginBottom:4 }}>Fatura / Görsel Seçin</div>
-                  <div style={{ fontSize:11, color:"#64748b" }}>PNG, JPG, JPEG (Maks. 5MB)</div>
-                </label>
-              ) : (
-                <div style={{ 
-                  background:"#13162a", border:"1px solid #2a2d3e", borderRadius:14, padding:12,
-                  display:"flex", alignItems:"center", gap:12, justifyContent:"space-between"
-                }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                    <div style={{ position:"relative", width:56, height:56, borderRadius:8, overflow:"hidden", background:"#0f1117", border:"1px solid #2a2d3e", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <img src={form.gorsel} alt="Fatura" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:"#2ed573", display:"flex", alignItems:"center", gap:4 }}>
-                        <span>✓ Belge Yüklendi</span>
-                      </div>
-                      <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Fatura görseli hazır</div>
-                    </div>
-                  </div>
-                  <button onClick={()=>setForm(p=>({...p,gorsel:""}))} style={{
-                    background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)",
-                    padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif"
-                  }}>Kaldır</button>
-                </div>
-              )}
-            </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setYeniParcaModal(false)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
-              <button onClick={parcaEkle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Kaydet</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Düzenle Modal */}
-      {duzenleModal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
-          display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
-          <div className="modal-box">
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-              <div style={{ fontSize:18, fontWeight:700 }}>✏️ Parça Düzenle</div>
-              <button onClick={()=>setDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
-            </div>
-            {[{label:"Ürün Adı",key:"ad",placeholder:"Örn: Ryzen 7 7700X"},
-              {label:"Marka",key:"marka",placeholder:"Örn: AMD, NVIDIA..."},
-              {label:"Seri No",key:"seriNo",placeholder: duzenleForm.cins === "Kasa" ? "İsteğe Bağlı (Sistem otomatik üretebilir)" : "Zorunlu"},
-              {label:"Alınan Yer (Tedarikçi)",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
-              <div key={f.key} style={{ marginBottom:14 }}>
-                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
-                <input value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder={f.placeholder} style={inp()}/>
-              </div>
-            ))}
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Cinsi</label>
-              <select value={duzenleForm.cins} onChange={e=>setDuzenleForm(p=>({...p,cins:e.target.value}))} style={inp()}>
-                {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
-              </select>
-            </div>
-            {duzenleForm.cins === "Kasa" ? (
-              <div style={{ background: "#13162a", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 14, padding: 16, marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>🖥️ Kasa Donanım Özellikleri</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {[
-                    { label: "İşlemci (CPU)", key: "kasaCpu", placeholder: "Örn: i5 12400F / Ryzen 5 5600" },
-                    { label: "Anakart", key: "kasaMb", placeholder: "Örn: ASUS H610M-K" },
-                    { label: "RAM Bellek", key: "kasaRam", placeholder: "Örn: 16GB DDR4 / 32GB DDR5" },
-                    { label: "SSD / Depolama", key: "kasaSsd", placeholder: "Örn: 500GB M.2 NVMe" },
-                    { label: "Ekran Kartı (GPU)", key: "kasaGpu", placeholder: "Örn: RTX 3060 / RX 6600 (veya Dahili)" },
-                    { label: "Güç Kaynağı (Power)", key: "kasaPower", placeholder: "Örn: 650W 80+" },
-                    { label: "Kasa Modeli", key: "kasaModel", placeholder: "Örn: Rampage X-Force RGB", span: 2 },
-                    { label: "Diğer Ek Notlar", key: "kasaNotes", placeholder: "Sıvı soğutma, fan detayları veya kozmetik durum...", isTextarea: true, span: 2 }
-                  ].map(spec => (
-                    <div key={spec.key} style={{ gridColumn: spec.span ? `span ${spec.span}` : undefined, marginBottom: 4 }}>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>{spec.label}</label>
-                      {spec.isTextarea ? (
-                        <textarea value={duzenleForm[spec.key]} onChange={e => setDuzenleForm(p => ({ ...p, [spec.key]: e.target.value }))} placeholder={spec.placeholder} style={{ ...inp(), height: 60, resize: "none" }} />
-                      ) : (
-                        <input type="text" value={duzenleForm[spec.key]} onChange={e => setDuzenleForm(p => ({ ...p, [spec.key]: e.target.value }))} placeholder={spec.placeholder} style={inp({ padding: "8px 12px" })} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ marginBottom:14 }}>
-                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
-                <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
-                  style={{ ...inp(), height: "100px", resize: "vertical" }}/>
-              </div>
-            )}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:14 }}>
-              {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
-                <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
-                  <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
-                  <input type={f.type} value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginBottom:22 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Fatura / Görsel Güncelle</label>
-              
-              <input type="file" accept="image/*" onChange={(e)=>{
-                const file = e.target.files[0];
-                if(file){
-                  const reader = new FileReader();
-                  reader.onloadend = () => { setDuzenleForm(p => ({ ...p, gorsel: reader.result })); };
-                  reader.readAsDataURL(file);
-                }
-              }} style={{ display:"none" }} id="duzenle-file" />
-
-              {!duzenleForm.gorsel ? (
-                <label htmlFor="duzenle-file" style={{
-                  display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-                  border:"2px dashed #2a2d3e", borderRadius:14, padding:"24px 16px", cursor:"pointer",
-                  background:"#13162a", transition:"all 0.2s ease-in-out", textAlign:"center"
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#6c63ff"; e.currentTarget.style.background = "#181b35"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2d3e"; e.currentTarget.style.background = "#13162a"; }}
-                >
-                  <div style={{ fontSize:28, marginBottom:8 }}>📤</div>
-                  <div style={{ fontSize:14, fontWeight:700, color:"#a78bfa", marginBottom:4 }}>Fatura / Görsel Seçin</div>
-                  <div style={{ fontSize:11, color:"#64748b" }}>PNG, JPG, JPEG (Maks. 5MB)</div>
-                </label>
-              ) : (
-                <div style={{ 
-                  background:"#13162a", border:"1px solid #2a2d3e", borderRadius:14, padding:12,
-                  display:"flex", alignItems:"center", gap:12, justifyContent:"space-between"
-                }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                    <div style={{ position:"relative", width:56, height:56, borderRadius:8, overflow:"hidden", background:"#0f1117", border:"1px solid #2a2d3e", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <img src={duzenleForm.gorsel} alt="Fatura" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:"#2ed573", display:"flex", alignItems:"center", gap:4 }}>
-                        <span>✓ Belge Güncellendi</span>
-                      </div>
-                      <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Fatura görseli hazır</div>
-                    </div>
-                  </div>
-                  <button onClick={()=>setDuzenleForm(p=>({...p,gorsel:""}))} style={{
-                    background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)",
-                    padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif"
-                  }}>Kaldır</button>
-                </div>
-              )}
-            </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
-              <button onClick={parcaGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {satisDuzenleModal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
-          <div className="modal-box" style={{ width: 400 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-              <div style={{ fontSize:18, fontWeight:700 }}>✏️ Satış Kaydı Düzenle</div>
-              <button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
-            </div>
-            
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Satış Fiyatı (₺)</label>
-              <input type="number" value={satisDuzenleForm.fiyat} onChange={e=>setSatisDuzenleForm(p=>({...p,fiyat:e.target.value}))} style={inp()}/>
-            </div>
-
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Müşteri Adı</label>
-              <input type="text" value={satisDuzenleForm.musteri} onChange={e=>setSatisDuzenleForm(p=>({...p,musteri:e.target.value}))} style={inp()}/>
-            </div>
-
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Teslim Alan Kişi</label>
-              <input type="text" value={satisDuzenleForm.teslimAlan} onChange={e=>setSatisDuzenleForm(p=>({...p,teslimAlan:e.target.value}))} style={inp()}/>
-            </div>
-
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setSatisDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
-              <button onClick={satisGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {satisModal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
-          display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
-          <div className="modal-box" style={{ width: 400 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-              <div style={{ fontSize:18, fontWeight:700 }}>🛒 Satış Yap</div>
-              <button onClick={()=>setSatisModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
-            </div>
-            <div style={{ fontSize:13, color:"#64748b", marginBottom:20 }}>
-              <span style={{ color:"#a78bfa", fontWeight:600 }}>{satisModal.ad}</span>
-            </div>
-            
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Satış Fiyatı (₺)</label>
-              <input type="number" value={satisForm.fiyat} onChange={e=>setSatisForm(p=>({...p,fiyat:e.target.value}))} placeholder="0" style={inp()}/>
-            </div>
-
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Müşteri Adı</label>
-              <input type="text" value={satisForm.musteri} onChange={e=>{
-                const val = e.target.value;
-                setSatisForm(p=>({
-                  ...p,
-                  musteri: val,
-                  teslimAlan: p.manualEdit ? p.teslimAlan : val
-                }));
-              }} placeholder="Müşteri adını girin" style={inp()}/>
-            </div>
-
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Teslim Alan Kişi</label>
-              <input type="text" value={satisForm.teslimAlan} onChange={e=>{
-                const val = e.target.value;
-                setSatisForm(p=>({
-                  ...p,
-                  teslimAlan: val,
-                  manualEdit: true
-                }));
-              }} placeholder="Teslim alan kişi adını girin (Müşteri ile aynıysa otomatik gelir)" style={inp()}/>
-            </div>
-
-            {satisForm.fiyat&&(
-              <div style={{ background:"rgba(46,213,115,.08)", border:"1px solid rgba(46,213,115,.2)", borderRadius:10, padding:"10px 14px", marginBottom:18, fontSize:13 }}>
-                Toplam: <span style={{ color:"#2ed573", fontWeight:700, fontSize:16 }}>{parseFloat(satisForm.fiyat||0).toLocaleString("tr-TR")} ₺</span>
-              </div>
-            )}
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setSatisModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
-              <button onClick={satisOnayla} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#2ed573,#00b894)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Satışı Onayla</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-        input::placeholder, textarea::placeholder{color:#3d4a5c} select option{background:#1a1d2e}
-        *{scrollbar-width:thin;scrollbar-color:#2a2d3e transparent}
-      `}</style>
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-  </script>
-</body>
-</html>
+                onMouseEnter={e => { 
+             
