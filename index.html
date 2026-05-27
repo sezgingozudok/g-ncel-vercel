@@ -20,7 +20,7 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 16px;
-    }
+    <!-- } -->
     .header-actions {
       display: flex; 
       align-items: center; 
@@ -2150,4 +2150,307 @@ function StokTakipIc({ kullanici, yetki, onCikis, kullanicilar, setKullanicilar,
                   textAlign: "center"
                 }}
                 onMouseEnter={e => { 
-             
+                  e.currentTarget.style.borderColor = "#a78bfa"; 
+                  e.currentTarget.style.background = "rgba(108,99,255,0.12)"; 
+                  e.currentTarget.style.transform = "scale(1.03)";
+                }}
+                onMouseLeave={e => { 
+                  e.currentTarget.style.borderColor = "rgba(108,99,255,0.4)"; 
+                  e.currentTarget.style.background = "rgba(108,99,255,0.04)"; 
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+                >
+                  <span style={{ fontSize: 22, filter: "drop-shadow(0 2px 8px rgba(108,99,255,0.4))" }}>📤</span>
+                  <span style={{ fontSize: 9, color: "#a78bfa", marginTop: 4, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>Yükle</span>
+                </label>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setYeniParcaModal(false)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
+              <button onClick={parcaEkle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Kaydet</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Düzenle Modal */}
+      {duzenleModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
+          <div className="modal-box">
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+              <div style={{ fontSize:18, fontWeight:700 }}>✏️ Parça Düzenle</div>
+              <button onClick={()=>setDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
+            </div>
+            {[{label:"Ürün Adı",key:"ad",placeholder:"Örn: Ryzen 7 7700X"},
+              {label:"Marka",key:"marka",placeholder:"Örn: AMD, NVIDIA..."},
+              {label:"Seri No",key:"seriNo",placeholder: duzenleForm.cins === "Kasa" ? "İsteğe Bağlı (Sistem otomatik üretebilir)" : "Zorunlu"},
+              {label:"Alınan Yer (Tedarikçi)",key:"tedarikci",placeholder:"Örn: ABC Teknoloji"}].map(f=>(
+              <div key={f.key} style={{ marginBottom:14 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
+                <input value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder={f.placeholder} style={inp()}/>
+              </div>
+            ))}
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Tedarikçi Telefon No</label>
+              <input type="text" value={duzenleForm.tedarikciTel} onChange={e=>setDuzenleForm(p=>({...p,tedarikciTel:e.target.value}))} placeholder="Örn: 0555 123 4567" style={inp()}/>
+            </div>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Cinsi</label>
+              <select value={duzenleForm.cins} onChange={e=>setDuzenleForm(p=>({...p,cins:e.target.value}))} style={inp()}>
+                {CINS_LISTESI.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            {duzenleForm.cins === "Kasa" ? (
+              <div style={{ background: "#13162a", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 14, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>🖥️ Kasa Donanım Özellikleri</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[
+                    { label: "İşlemci (CPU)", key: "kasaCpu", placeholder: "Örn: i5 12400F / Ryzen 5 5600" },
+                    { label: "Anakart", key: "kasaMb", placeholder: "Örn: ASUS H610M-K" },
+                    { label: "RAM Bellek", key: "kasaRam", placeholder: "Örn: 16GB DDR4 / 32GB DDR5" },
+                    { label: "SSD / Depolama", key: "kasaSsd", placeholder: "Örn: 500GB M.2 NVMe" },
+                    { label: "Ekran Kartı (GPU)", key: "kasaGpu", placeholder: "Örn: RTX 3060 / RX 6600 (veya Dahili)" },
+                    { label: "Güç Kaynağı (Power)", key: "kasaPower", placeholder: "Örn: 650W 80+" },
+                    { label: "Kasa Modeli", key: "kasaModel", placeholder: "Örn: Rampage X-Force RGB", span: 2 },
+                    { label: "Diğer Ek Notlar", key: "kasaNotes", placeholder: "Sıvı soğutma, fan detayları veya kozmetik durum...", isTextarea: true, span: 2 }
+                  ].map(spec => (
+                    <div key={spec.key} style={{ gridColumn: spec.span ? `span ${spec.span}` : undefined, marginBottom: 4 }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>{spec.label}</label>
+                      {spec.isTextarea ? (
+                        <textarea value={duzenleForm[spec.key]} onChange={e => setDuzenleForm(p => ({ ...p, [spec.key]: e.target.value }))} placeholder={spec.placeholder} style={{ ...inp(), height: 60, resize: "none" }} />
+                      ) : (
+                        <input type="text" value={duzenleForm[spec.key]} onChange={e => setDuzenleForm(p => ({ ...p, [spec.key]: e.target.value }))} placeholder={spec.placeholder} style={inp({ padding: "8px 12px" })} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginBottom:14 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Ürün Açıklaması</label>
+                <textarea value={duzenleForm.aciklama} onChange={e=>setDuzenleForm(p=>({...p,aciklama:e.target.value}))} placeholder="Ürüne dair geniş ek notlar..." 
+                  style={{ ...inp(), height: "100px", resize: "vertical" }}/>
+              </div>
+            )}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:14, marginBottom:14 }}>
+              {[{label:"Alış Fiyatı (₺)",key:"alisFiyati",type:"number"},{label:"Alış Tarihi",key:"alisTarihi",type:"date"}].map(f=>(
+                <div key={f.key} style={{ gridColumn: f.key === "alisTarihi" ? "span 2" : undefined }}>
+                  <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>{f.label}</label>
+                  <input type={f.type} value={duzenleForm[f.key]} onChange={e=>setDuzenleForm(p=>({...p,[f.key]:e.target.value}))} placeholder="0" style={inp()}/>
+                </div>
+              ))}
+            </div>
+            <div style={{ 
+              marginBottom:22, 
+              background: "rgba(19,22,42,0.6)", 
+              border: "1px solid rgba(108,99,255,0.15)", 
+              borderRadius: 16, 
+              padding: 16,
+              boxShadow: "inset 0 0 12px rgba(108,99,255,0.05)"
+            }}>
+              <label style={{ fontSize:11, fontWeight:700, color:"#a78bfa", display:"block", marginBottom:12, textTransform:"uppercase", letterSpacing:1 }}>
+                📸 Ürün Görselleri / Faturalar
+              </label>
+              
+              <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e, true)} style={{ display:"none" }} id="duzenle-file" />
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: 12 }}>
+                {getGorseller(duzenleForm.gorsel).map((imgBase64, idx) => (
+                  <div key={idx} style={{ 
+                    position: "relative", 
+                    width: 76, 
+                    height: 76, 
+                    borderRadius: 12, 
+                    overflow: "hidden", 
+                    background: "#0b0c16", 
+                    border: "1px solid rgba(108,99,255,0.25)", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                    transition: "transform 0.2s ease"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                  >
+                    <img src={imgBase64} alt="Görsel" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setDuzenleForm(p => {
+                          const list = getGorseller(p.gorsel).filter((_, i) => i !== idx);
+                          return { ...p, gorsel: list.join("|||") };
+                        });
+                      }} 
+                      style={{ 
+                        position: "absolute", 
+                        top: 4, 
+                        right: 4, 
+                        background: "rgba(239,68,68,0.9)", 
+                        border: "none", 
+                        color: "#fff", 
+                        width: 20, 
+                        height: 20, 
+                        borderRadius: "50%", 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        fontSize: 10, 
+                        cursor: "pointer", 
+                        fontWeight: "bold",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+                      }}
+                      title="Görseli kaldır"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                
+                <label htmlFor="duzenle-file" style={{
+                  width: 76, 
+                  height: 76, 
+                  borderRadius: 12, 
+                  border: "2px dashed rgba(108,99,255,0.4)",
+                  display: "flex", 
+                  flexDirection: "column", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  cursor: "pointer", 
+                  background: "rgba(108,99,255,0.04)", 
+                  transition: "all 0.2s ease", 
+                  textAlign: "center"
+                }}
+                onMouseEnter={e => { 
+                  e.currentTarget.style.borderColor = "#a78bfa"; 
+                  e.currentTarget.style.background = "rgba(108,99,255,0.12)"; 
+                  e.currentTarget.style.transform = "scale(1.03)";
+                }}
+                onMouseLeave={e => { 
+                  e.currentTarget.style.borderColor = "rgba(108,99,255,0.4)"; 
+                  e.currentTarget.style.background = "rgba(108,99,255,0.04)"; 
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+                >
+                  <span style={{ fontSize: 22, filter: "drop-shadow(0 2px 8px rgba(108,99,255,0.4))" }}>📤</span>
+                  <span style={{ fontSize: 9, color: "#a78bfa", marginTop: 4, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>Yükle</span>
+                </label>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
+              <button onClick={parcaGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {satisDuzenleModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
+          <div className="modal-box" style={{ width: 400 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+              <div style={{ fontSize:18, fontWeight:700 }}>✏️ Satış Kaydı Düzenle</div>
+              <button onClick={()=>setSatisDuzenleModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
+            </div>
+            
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Satış Fiyatı (₺)</label>
+              <input type="number" value={satisDuzenleForm.fiyat} onChange={e=>setSatisDuzenleForm(p=>({...p,fiyat:e.target.value}))} style={inp()}/>
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Müşteri Adı</label>
+              <input type="text" value={satisDuzenleForm.musteri} onChange={e=>setSatisDuzenleForm(p=>({...p,musteri:e.target.value}))} style={inp()}/>
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Müşteri Telefon No</label>
+              <input type="text" value={satisDuzenleForm.musteriTel} onChange={e=>setSatisDuzenleForm(p=>({...p,musteriTel:e.target.value}))} placeholder="Örn: 0555 123 4567" style={inp()}/>
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Teslim Alan Kişi</label>
+              <input type="text" value={satisDuzenleForm.teslimAlan} onChange={e=>setSatisDuzenleForm(p=>({...p,teslimAlan:e.target.value}))} style={inp()}/>
+            </div>
+
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setSatisDuzenleModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
+              <button onClick={satisGuncelle} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#6c63ff,#3a86ff)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Güncelle</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {satisModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)",
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
+          <div className="modal-box" style={{ width: 400 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+              <div style={{ fontSize:18, fontWeight:700 }}>🛒 Satış Yap</div>
+              <button onClick={()=>setSatisModal(null)} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>✕</button>
+            </div>
+            <div style={{ fontSize:13, color:"#64748b", marginBottom:20 }}>
+              <span style={{ color:"#a78bfa", fontWeight:600 }}>{satisModal.ad}</span>
+            </div>
+            
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Satış Fiyatı (₺)</label>
+              <input type="number" value={satisForm.fiyat} onChange={e=>setSatisForm(p=>({...p,fiyat:e.target.value}))} placeholder="0" style={inp()}/>
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Müşteri Adı</label>
+              <input type="text" value={satisForm.musteri} onChange={e=>{
+                const val = e.target.value;
+                setSatisForm(p=>({
+                  ...p,
+                  musteri: val,
+                  teslimAlan: p.manualEdit ? p.teslimAlan : val
+                }));
+              }} placeholder="Müşteri adını girin" style={inp()}/>
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Müşteri Telefon No</label>
+              <input type="text" value={satisForm.musteriTel} onChange={e=>setSatisForm(p=>({...p,musteriTel:e.target.value}))} placeholder="Örn: 0555 123 4567" style={inp()}/>
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#94a3b8", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.8 }}>Teslim Alan Kişi</label>
+              <input type="text" value={satisForm.teslimAlan} onChange={e=>{
+                const val = e.target.value;
+                setSatisForm(p=>({
+                  ...p,
+                  teslimAlan: val,
+                  manualEdit: true
+                }));
+              }} placeholder="Teslim alan kişi adını girin (Müşteri ile aynıysa otomatik gelir)" style={inp()}/>
+            </div>
+
+            {satisForm.fiyat&&(
+              <div style={{ background:"rgba(46,213,115,.08)", border:"1px solid rgba(46,213,115,.2)", borderRadius:10, padding:"10px 14px", marginBottom:18, fontSize:13 }}>
+                Toplam: <span style={{ color:"#2ed573", fontWeight:700, fontSize:16 }}>{parseFloat(satisForm.fiyat||0).toLocaleString("tr-TR")} ₺</span>
+              </div>
+            )}
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setSatisModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1px solid #2a2d3e", background:"transparent", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>İptal</button>
+              <button onClick={satisOnayla} style={{ flex:2, padding:11, borderRadius:10, border:"none", background:"linear-gradient(135deg,#2ed573,#00b894)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:14 }}>✓ Satışı Onayla</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+        input::placeholder, textarea::placeholder{color:#3d4a5c} select option{background:#1a1d2e}
+        *{scrollbar-width:thin;scrollbar-color:#2a2d3e transparent}
+      `}</style>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
