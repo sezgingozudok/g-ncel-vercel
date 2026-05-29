@@ -204,23 +204,33 @@ const CINS_IKONLARI = {
 
 const getTeslimAlan = (s) => {
   if (!s || !s.aciklama) return s ? parseMusteri(s.musteri).ad : "";
-  const match = s.aciklama.match(/Teslim Alan: (.*)/);
-  return match ? match[1] : parseMusteri(s.musteri).ad;
+  const lines = s.aciklama.split("\n").map(line => line.trim());
+  const teslimAlanLines = lines.filter(line => line.startsWith("Teslim Alan:"));
+  if (teslimAlanLines.length > 0) {
+    const lastLine = teslimAlanLines[teslimAlanLines.length - 1];
+    return lastLine.replace("Teslim Alan:", "").trim();
+  }
+  return parseMusteri(s.musteri).ad;
 };
 
 const cleanDescription = (desc) => {
   if (!desc) return "Not eklenmemiş";
-  return desc
-    .replace(/\nTeslim Alan: .*/g, "")
-    .replace(/\nDüzenleyen: .*/g, "")
-    .replace(/\nSilindi: .*/g, "");
+  const cleaned = desc
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => !line.startsWith("Teslim Alan:") && !line.startsWith("Düzenleyen:") && !line.startsWith("Silindi:"))
+    .join("\n")
+    .trim();
+  return cleaned || "Not eklenmemiş";
 };
 
 const cleanEditLog = (desc) => {
   if (!desc) return "";
   return desc
-    .replace(/\nDüzenleyen: .*/g, "")
-    .replace(/\nSilindi: .*/g, "");
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => !line.startsWith("Teslim Alan:") && !line.startsWith("Düzenleyen:") && !line.startsWith("Silindi:"))
+    .join("\n");
 };
 
 const getEditorInfo = (desc) => {
